@@ -1,0 +1,735 @@
+﻿diff --git a/app/access/create/page.tsx b/app/access/create/page.tsx
+new file mode 100644
+index 0000000..3ce8419
+--- /dev/null
++++ b/app/access/create/page.tsx
+@@ -0,0 +1,29 @@
++import { redirect } from "next/navigation";
++import { createAccessRepository } from "@/features/access/repositories/access-repository";
++import { hasAccessSecret } from "@/features/access/services/access-service";
++import { CreateAccessPasswordForm } from "@/features/access/components/create-access-password-form";
++
++export const dynamic = "force-dynamic";
++
++export default async function CreateAccessPasswordPage() {
++  if (await hasAccessSecret(createAccessRepository())) {
++    redirect("/");
++  }
++
++  return (
++    <main className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] px-4 py-8">
++      <section className="card w-full max-w-md p-5">
++        <div className="mb-5">
++          <p className="mb-2 text-sm font-semibold text-[var(--ink-secondary)]">瘦身助手</p>
++          <h1 className="m-0 text-[28px] font-semibold leading-tight text-[var(--ink-primary)]">
++            创建访问密码
++          </h1>
++          <p className="mt-2 text-sm text-[var(--ink-secondary)]">
++            第一次使用前先设置一个访问密码，后续访问会用受信设备识别。
++          </p>
++        </div>
++        <CreateAccessPasswordForm />
++      </section>
++    </main>
++  );
++}
+
+
+diff --git a/app/page.tsx b/app/page.tsx
+new file mode 100644
+index 0000000..3f45a68
+--- /dev/null
++++ b/app/page.tsx
+@@ -0,0 +1,95 @@
++import Link from "next/link";
++import { redirect } from "next/navigation";
++import { AppShell } from "@/components/layout/app-shell";
++import { Button } from "@/components/ui/button";
++import { StatusCard } from "@/features/dashboard/components/status-card";
++import { createAccessRepository } from "@/features/access/repositories/access-repository";
++import { hasAccessSecret } from "@/features/access/services/access-service";
++
++export const dynamic = "force-dynamic";
++
++const statusItems = [
++  { label: "身体数据", value: "待记录", href: "/records" },
++  { label: "跑步记录", value: "待添加", href: "/records" },
++  { label: "提醒状态", value: "未开启提醒", href: "/settings" },
++];
++
++const metricCards = [
++  {
++    title: "健康摘要",
++    value: "暂无数据",
++    description: "记录体重、围度和体脂率后显示趋势。",
++    tone: "health",
++  },
++  {
++    title: "运动摘要",
++    value: "暂无跑量",
++    description: "添加跑步记录后显示本周跑量和次数。",
++    tone: "motion",
++  },
++  {
++    title: "目标进度",
++    value: "未设置",
++    description: "设置健康目标和跑步目标后显示差距。",
++    tone: "warning",
++  },
++] as const;
++
++export default async function Home() {
++  if (!(await hasAccessSecret(createAccessRepository()))) {
++    redirect("/access/create");
++  }
++
++  return (
++    <AppShell>
++      <main className="page-main">
++        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
++          <div>
++            <h1 className="m-0 text-[32px] font-semibold leading-tight tracking-normal text-[var(--ink-primary)]">
++              瘦身助手
++            </h1>
++            <p className="mt-2 max-w-2xl text-sm text-[var(--ink-secondary)]">
++              今天先完成记录，再看趋势和目标差距。
++            </p>
++          </div>
++          <Button asChild>
++            <Link href="/records">记录今天</Link>
++          </Button>
++        </div>
++
++        <section aria-labelledby="today-status" className="card mb-4 p-4">
++          <div className="mb-3 flex items-center justify-between gap-3">
++            <h2 id="today-status" className="m-0 text-base font-semibold">
++              今日状态
++            </h2>
++            <span className="rounded-full bg-[var(--warning-soft)] px-3 py-1 text-xs font-semibold text-[#92400e]">
++              待开始
++            </span>
++          </div>
++          <div className="grid gap-2">
++            {statusItems.map((item) => (
++              <Link
++                key={item.label}
++                href={item.href}
++                className="flex min-h-11 items-center justify-between border-b border-[var(--border-soft)] py-2 last:border-b-0"
++                aria-label={`${item.label}：${item.value}`}
++              >
++                <span className="text-[var(--ink-secondary)]">{item.label}</span>
++                <span className="font-semibold text-[var(--ink-primary)]">{item.value}</span>
++              </Link>
++            ))}
++          </div>
++        </section>
++
++        <section
++          aria-label="首页摘要"
++          className="grid grid-cols-1 gap-4 md:grid-cols-3"
++        >
++          {metricCards.map((card) => (
++            <StatusCard key={card.title} {...card} />
++          ))}
++        </section>
++      </main>
++    </AppShell>
++  );
++}
+
+
+diff --git a/features/access/actions/create-access-password.ts b/features/access/actions/create-access-password.ts
+new file mode 100644
+index 0000000..1799cd7
+--- /dev/null
++++ b/features/access/actions/create-access-password.ts
+@@ -0,0 +1,45 @@
++"use server";
++
++import { cookies, headers } from "next/headers";
++import { redirect } from "next/navigation";
++import { createAccessRepository } from "../repositories/access-repository.ts";
++import { createInitialAccessPassword } from "../services/access-service.ts";
++import { DEVICE_TOKEN_COOKIE } from "../services/device-token.ts";
++
++export type CreateAccessPasswordState = {
++  fieldErrors: {
++    password?: string;
++    confirmPassword?: string;
++    form?: string;
++  };
++};
++
++export const initialCreateAccessPasswordState: CreateAccessPasswordState = {
++  fieldErrors: {},
++};
++
++export async function createAccessPasswordAction(
++  _previousState: CreateAccessPasswordState,
++  formData: FormData,
++): Promise<CreateAccessPasswordState> {
++  const headerStore = await headers();
++  const result = await createInitialAccessPassword(createAccessRepository(), {
++    password: String(formData.get("password") ?? ""),
++    confirmPassword: String(formData.get("confirmPassword") ?? ""),
++    userAgent: headerStore.get("user-agent"),
++  });
++
++  if (!result.ok) {
++    return { fieldErrors: result.fieldErrors };
++  }
++
++  const cookieStore = await cookies();
++  cookieStore.set(DEVICE_TOKEN_COOKIE, result.deviceToken, {
++    httpOnly: true,
++    sameSite: "lax",
++    secure: process.env.NODE_ENV === "production",
++    path: "/",
++  });
++
++  redirect("/");
++}
+
+
+diff --git a/features/access/components/create-access-password-form.tsx b/features/access/components/create-access-password-form.tsx
+new file mode 100644
+index 0000000..d323915
+--- /dev/null
++++ b/features/access/components/create-access-password-form.tsx
+@@ -0,0 +1,67 @@
++"use client";
++
++import { useActionState } from "react";
++import {
++  createAccessPasswordAction,
++  initialCreateAccessPasswordState,
++} from "../actions/create-access-password";
++import { Button } from "@/components/ui/button";
++
++export function CreateAccessPasswordForm() {
++  const [state, formAction, pending] = useActionState(
++    createAccessPasswordAction,
++    initialCreateAccessPasswordState,
++  );
++
++  return (
++    <form action={formAction} className="grid gap-4">
++      {state.fieldErrors.form ? (
++        <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">
++          {state.fieldErrors.form}
++        </p>
++      ) : null}
++
++      <div className="grid gap-2">
++        <label htmlFor="password" className="text-sm font-semibold text-[var(--ink-primary)]">
++          访问密码
++        </label>
++        <input
++          id="password"
++          name="password"
++          type="password"
++          autoComplete="new-password"
++          aria-describedby={state.fieldErrors.password ? "password-error" : undefined}
++          className="min-h-11 rounded-md border border-[var(--border-soft)] bg-white px-3 text-sm text-[var(--ink-primary)]"
++        />
++        {state.fieldErrors.password ? (
++          <p id="password-error" className="text-sm text-[var(--danger)]">
++            {state.fieldErrors.password}
++          </p>
++        ) : null}
++      </div>
++
++      <div className="grid gap-2">
++        <label htmlFor="confirmPassword" className="text-sm font-semibold text-[var(--ink-primary)]">
++          确认访问密码
++        </label>
++        <input
++          id="confirmPassword"
++          name="confirmPassword"
++          type="password"
++          autoComplete="new-password"
++          aria-describedby={state.fieldErrors.confirmPassword ? "confirm-password-error" : undefined}
++          className="min-h-11 rounded-md border border-[var(--border-soft)] bg-white px-3 text-sm text-[var(--ink-primary)]"
++        />
++        {state.fieldErrors.confirmPassword ? (
++          <p id="confirm-password-error" className="text-sm text-[var(--danger)]">
++            {state.fieldErrors.confirmPassword}
++          </p>
++        ) : null}
++      </div>
++
++      <Button type="submit" disabled={pending}>
++        创建访问密码
++      </Button>
++    </form>
++  );
++}
+
+
+diff --git a/features/access/services/access-service.ts b/features/access/services/access-service.ts
+new file mode 100644
+index 0000000..0480d29
+--- /dev/null
++++ b/features/access/services/access-service.ts
+@@ -0,0 +1,85 @@
++import type { createAccessRepository } from "../repositories/access-repository.ts";
++import { createDeviceToken, hashDeviceToken } from "./device-token.ts";
++import { hashAccessPassword } from "./password-hashing.ts";
++
++type AccessRepository = ReturnType<typeof createAccessRepository>;
++
++export type CreateInitialAccessPasswordInput = {
++  password: string;
++  confirmPassword: string;
++  userAgent: string | null;
++  nowIso?: string;
++};
++
++export type CreateInitialAccessPasswordResult =
++  | { ok: true; deviceToken: string }
++  | {
++      ok: false;
++      fieldErrors: {
++        password?: string;
++        confirmPassword?: string;
++        form?: string;
++      };
++    };
++
++export function validateAccessPasswordInput(input: Pick<CreateInitialAccessPasswordInput, "password" | "confirmPassword">) {
++  const fieldErrors: Extract<CreateInitialAccessPasswordResult, { ok: false }>["fieldErrors"] = {};
++
++  if (!input.password) {
++    fieldErrors.password = "请输入访问密码";
++  } else if (input.password.length < 8) {
++    fieldErrors.password = "访问密码至少需要 8 个字符";
++  }
++
++  if (input.password && input.confirmPassword && input.password !== input.confirmPassword) {
++    fieldErrors.confirmPassword = "两次输入的访问密码不一致";
++  }
++
++  return fieldErrors;
++}
++
++export async function hasAccessSecret(repository: AccessRepository) {
++  const secret = repository.getAccessSecret();
++  return secret.ok && Boolean(secret.data);
++}
++
++export async function createInitialAccessPassword(
++  repository: AccessRepository,
++  input: CreateInitialAccessPasswordInput,
++): Promise<CreateInitialAccessPasswordResult> {
++  const fieldErrors = validateAccessPasswordInput(input);
++
++  if (Object.keys(fieldErrors).length > 0) {
++    return { ok: false, fieldErrors };
++  }
++
++  if (await hasAccessSecret(repository)) {
++    return { ok: false, fieldErrors: { form: "访问密码已经创建，请验证后访问" } };
++  }
++
++  const nowIso = input.nowIso ?? new Date().toISOString();
++  const passwordHash = await hashAccessPassword(input.password);
++  const savedSecret = repository.saveAccessSecret({
++    passwordHash: passwordHash.hash,
++    passwordHashAlgorithm: passwordHash.algorithm,
++    nowIso,
++  });
++
++  if (!savedSecret.ok) {
++    return { ok: false, fieldErrors: { form: savedSecret.error.message } };
++  }
++
++  const deviceToken = createDeviceToken();
++  const trustedDevice = repository.createTrustedDevice({
++    deviceIdentifierHash: hashDeviceToken(deviceToken),
++    displayName: "当前浏览器",
++    userAgent: input.userAgent,
++    nowIso,
++  });
++
++  if (!trustedDevice.ok) {
++    return { ok: false, fieldErrors: { form: trustedDevice.error.message } };
++  }
++
++  return { ok: true, deviceToken };
++}
+
+
+diff --git a/features/access/services/device-token.ts b/features/access/services/device-token.ts
+new file mode 100644
+index 0000000..47b8cf0
+--- /dev/null
++++ b/features/access/services/device-token.ts
+@@ -0,0 +1,11 @@
++import { createHash, randomBytes } from "node:crypto";
++
++export const DEVICE_TOKEN_COOKIE = "slimming_device_token";
++
++export function createDeviceToken() {
++  return randomBytes(32).toString("base64url");
++}
++
++export function hashDeviceToken(deviceToken: string) {
++  return createHash("sha256").update(deviceToken).digest("base64url");
++}
+
+
+diff --git a/features/access/services/password-hashing.ts b/features/access/services/password-hashing.ts
+new file mode 100644
+index 0000000..b14064a
+--- /dev/null
++++ b/features/access/services/password-hashing.ts
+@@ -0,0 +1,49 @@
++import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
++const SCRYPT_N = 16384;
++const SCRYPT_R = 8;
++const SCRYPT_P = 1;
++const KEY_LENGTH = 64;
++
++export type PasswordHashResult = {
++  hash: string;
++  algorithm: "scrypt:v1";
++};
++
++export async function hashAccessPassword(password: string): Promise<PasswordHashResult> {
++  const salt = randomBytes(16);
++  const digest = scryptSync(password, salt, KEY_LENGTH, {
++    N: SCRYPT_N,
++    r: SCRYPT_R,
++    p: SCRYPT_P,
++  });
++
++  return {
++    algorithm: "scrypt:v1",
++    hash: [
++      "scrypt",
++      "v1",
++      String(SCRYPT_N),
++      String(SCRYPT_R),
++      String(SCRYPT_P),
++      salt.toString("base64url"),
++      digest.toString("base64url"),
++    ].join(":"),
++  };
++}
++
++export async function verifyAccessPassword(password: string, storedHash: string): Promise<boolean> {
++  const [algorithm, version, n, r, p, saltBase64, digestBase64] = storedHash.split(":");
++
++  if (algorithm !== "scrypt" || version !== "v1" || !saltBase64 || !digestBase64) {
++    return false;
++  }
++
++  const expected = Buffer.from(digestBase64, "base64url");
++  const actual = scryptSync(password, Buffer.from(saltBase64, "base64url"), expected.length, {
++    N: Number(n),
++    r: Number(r),
++    p: Number(p),
++  });
++
++  return actual.length === expected.length && timingSafeEqual(actual, expected);
++}
+
+
+diff --git a/tests/access-service.test.mjs b/tests/access-service.test.mjs
+new file mode 100644
+index 0000000..a509b45
+--- /dev/null
++++ b/tests/access-service.test.mjs
+@@ -0,0 +1,114 @@
++import assert from "node:assert/strict";
++import { mkdtempSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { test } from "node:test";
++import Database from "better-sqlite3";
++import { drizzle } from "drizzle-orm/better-sqlite3";
++import { migrate } from "drizzle-orm/better-sqlite3/migrator";
++
++import { createAccessRepository } from "../features/access/repositories/access-repository.ts";
++import { createInitialAccessPassword } from "../features/access/services/access-service.ts";
++import { createDeviceToken, hashDeviceToken } from "../features/access/services/device-token.ts";
++import { hashAccessPassword, verifyAccessPassword } from "../features/access/services/password-hashing.ts";
++import * as schema from "../db/schema.ts";
++
++function createTempRepository() {
++  const dir = mkdtempSync(join(tmpdir(), "slimming-assistant-access-"));
++  const sqlitePath = join(dir, "test.sqlite");
++  const sqlite = new Database(sqlitePath);
++  sqlite.pragma("foreign_keys = ON");
++  const db = drizzle(sqlite, { schema });
++  migrate(db, { migrationsFolder: "./db/migrations" });
++
++  return {
++    repository: createAccessRepository(db),
++    sqlite,
++    cleanup() {
++      sqlite.close();
++      rmSync(dir, { recursive: true, force: true });
++    },
++  };
++}
++
++test("访问密码哈希不包含明文，并且同密码每次 salt 不同", async () => {
++  const first = await hashAccessPassword("correct horse battery staple");
++  const second = await hashAccessPassword("correct horse battery staple");
++
++  assert.match(first.hash, /^scrypt:v1:/);
++  assert.notEqual(first.hash, second.hash);
++  assert.equal(first.hash.includes("correct horse battery staple"), false);
++  assert.equal(await verifyAccessPassword("correct horse battery staple", first.hash), true);
++  assert.equal(await verifyAccessPassword("wrong password", first.hash), false);
++});
++
++test("设备 token 只以哈希形式保存", () => {
++  const token = createDeviceToken();
++  const tokenHash = hashDeviceToken(token);
++
++  assert.equal(token.length >= 32, true);
++  assert.notEqual(token, tokenHash);
++  assert.equal(tokenHash.includes(token), false);
++});
++
++test("首次创建访问密码会保存密码哈希并信任当前设备", async () => {
++  const { repository, sqlite, cleanup } = createTempRepository();
++
++  try {
++    const result = await createInitialAccessPassword(repository, {
++      password: "12345678",
++      confirmPassword: "12345678",
++      userAgent: "Mozilla/5.0",
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++
++    assert.equal(result.ok, true);
++    assert.ok(result.ok && result.deviceToken.length >= 32);
++
++    const secret = repository.getAccessSecret();
++    assert.equal(secret.ok, true);
++    assert.match(secret.data?.passwordHash ?? "", /^scrypt:v1:/);
++    assert.equal(secret.data?.passwordHash.includes("12345678"), false);
++
++    const devices = sqlite.prepare("select * from trusted_devices").all();
++    assert.equal(devices.length, 1);
++    assert.notEqual(devices[0].device_identifier_hash, result.ok && result.deviceToken);
++  } finally {
++    cleanup();
++  }
++});
++
++test("首次创建访问密码返回中文字段错误", async () => {
++  const { repository, cleanup } = createTempRepository();
++
++  try {
++    const empty = await createInitialAccessPassword(repository, {
++      password: "",
++      confirmPassword: "",
++      userAgent: null,
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++    assert.equal(empty.ok, false);
++    assert.equal(empty.ok ? "" : empty.fieldErrors.password, "请输入访问密码");
++
++    const short = await createInitialAccessPassword(repository, {
++      password: "123",
++      confirmPassword: "123",
++      userAgent: null,
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++    assert.equal(short.ok, false);
++    assert.equal(short.ok ? "" : short.fieldErrors.password, "访问密码至少需要 8 个字符");
++
++    const mismatch = await createInitialAccessPassword(repository, {
++      password: "12345678",
++      confirmPassword: "87654321",
++      userAgent: null,
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++    assert.equal(mismatch.ok, false);
++    assert.equal(mismatch.ok ? "" : mismatch.fieldErrors.confirmPassword, "两次输入的访问密码不一致");
++  } finally {
++    cleanup();
++  }
++});
+
+
+diff --git a/tests/app-shell.test.mjs b/tests/app-shell.test.mjs
+new file mode 100644
+index 0000000..6b25ea2
+--- /dev/null
++++ b/tests/app-shell.test.mjs
+@@ -0,0 +1,168 @@
++import assert from "node:assert/strict";
++import { spawn } from "node:child_process";
++import { once } from "node:events";
++import { mkdtempSync, readFileSync, rmSync } from "node:fs";
++import { createServer } from "node:net";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { test } from "node:test";
++import Database from "better-sqlite3";
++import { drizzle } from "drizzle-orm/better-sqlite3";
++import { migrate } from "drizzle-orm/better-sqlite3/migrator";
++import { createAccessRepository } from "../features/access/repositories/access-repository.ts";
++import * as schema from "../db/schema.ts";
++
++const navigationSource = readFileSync("lib/navigation.ts", "utf8");
++const pageSource = readFileSync("app/page.tsx", "utf8");
++const desktopNavSource = readFileSync("components/layout/desktop-sidebar.tsx", "utf8");
++const mobileNavSource = readFileSync("components/layout/mobile-nav.tsx", "utf8");
++const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
++const globalsSource = readFileSync("app/globals.css", "utf8");
++const packageSource = JSON.parse(readFileSync("package.json", "utf8"));
++
++async function getFreePort() {
++  const server = createServer();
++  server.listen(0, "127.0.0.1");
++  await once(server, "listening");
++  const { port } = server.address();
++  server.close();
++  await once(server, "close");
++  return port;
++}
++
++async function waitForReady(baseUrl, child, output) {
++  const deadline = Date.now() + 60_000;
++
++  while (Date.now() < deadline) {
++    if (child.exitCode !== null) {
++      const serverOutput = output.join("");
++      const urls = [...serverOutput.matchAll(/http:\/\/[^\s]+/g)].map(([url]) => url);
++      const existingServerUrl = urls.at(-1);
++
++      if (serverOutput.includes("Another next dev server is already running") && existingServerUrl) {
++        const response = await fetch(existingServerUrl);
++        if (response.ok) {
++          return existingServerUrl;
++        }
++      }
++
++      throw new Error(`Next dev server exited early.\n${serverOutput}`);
++    }
++
++    try {
++      const response = await fetch(baseUrl);
++      if (response.ok) {
++        return baseUrl;
++      }
++    } catch {
++      // Server is still starting.
++    }
++
++    await new Promise((resolve) => setTimeout(resolve, 500));
++  }
++
++  throw new Error(`Next dev server did not become ready.\n${output.join("")}`);
++}
++
++function createInitializedAccessDatabase() {
++  const dir = mkdtempSync(join(tmpdir(), "slimming-assistant-routes-"));
++  const sqlitePath = join(dir, "routes.sqlite");
++  const sqlite = new Database(sqlitePath);
++  sqlite.pragma("foreign_keys = ON");
++  const db = drizzle(sqlite, { schema });
++  migrate(db, { migrationsFolder: "./db/migrations" });
++  const repository = createAccessRepository(db);
++  repository.saveAccessSecret({
++    passwordHash: "scrypt:v1:test",
++    passwordHashAlgorithm: "scrypt:v1",
++    nowIso: "2026-06-26T00:00:00.000Z",
++  });
++  sqlite.close();
++
++  return {
++    sqlitePath,
++    cleanup() {
++      rmSync(dir, { recursive: true, force: true });
++    },
++  };
++}
++
++test("主导航使用中文页面，并包含固定的五个入口", () => {
++  for (const label of ["首页", "记录", "历史", "目标", "设置"]) {
++    assert.match(navigationSource, new RegExp(`label: "${label}"`));
++  }
++});
++
++test("首页是应用仪表盘，不是营销页面", () => {
++  assert.match(pageSource, /瘦身助手/);
++  assert.match(pageSource, /记录今天/);
++  assert.match(pageSource, /今日状态/);
++  assert.match(pageSource, /href="\/records"|href: "\/records"/);
++  assert.match(pageSource, /redirect\("\/access\/create"\)/);
++  assert.doesNotMatch(pageSource, /landing|hero|pricing|signup/i);
++});
++
++test("导航、按钮和移动端安全区具备基础交互保护", () => {
++  assert.match(desktopNavSource, /usePathname/);
++  assert.match(mobileNavSource, /usePathname/);
++  assert.match(desktopNavSource, /aria-current/);
++  assert.match(mobileNavSource, /aria-current/);
++  assert.match(buttonSource, /type: type \?\? "button"/);
++  assert.match(mobileNavSource, /safe-area-inset-bottom/);
++  assert.match(globalsSource, /safe-area-inset-bottom/);
++});
++
++test("基础质量命令存在", () => {
++  assert.equal(packageSource.scripts.typecheck, "next typegen && tsc --noEmit");
++  assert.ok(packageSource.scripts.lint);
++  assert.ok(packageSource.scripts.build);
++  assert.ok(packageSource.scripts.dev);
++  assert.ok(packageSource.scripts["db:generate"]);
++  assert.ok(packageSource.scripts["db:migrate"]);
++});
++
++test("主要路由可以通过 Next 实际渲染", { timeout: 90_000 }, async () => {
++  const port = await getFreePort();
++  const baseUrl = `http://127.0.0.1:${port}`;
++  const accessDb = createInitializedAccessDatabase();
++  const output = [];
++  const child = spawn(
++    process.execPath,
++    ["node_modules/next/dist/bin/next", "dev", "-p", String(port), "-H", "127.0.0.1"],
++    {
++      env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", SQLITE_PATH: accessDb.sqlitePath },
++      stdio: ["ignore", "pipe", "pipe"],
++    },
++  );
++
++  child.stdout.on("data", (chunk) => output.push(chunk.toString()));
++  child.stderr.on("data", (chunk) => output.push(chunk.toString()));
++
++  try {
++    const actualBaseUrl = await waitForReady(`${baseUrl}/`, child, output);
++
++    for (const [path, expectedText] of [
++      ["/", "记录今天"],
++      ["/records", "记录"],
++      ["/history", "历史"],
++      ["/goals", "目标"],
++      ["/settings", "设置"],
++    ]) {
++      const response = await fetch(`${actualBaseUrl}${path}`);
++      const html = await response.text();
++
++      assert.equal(response.status, 200, `${path} should render`);
++      assert.match(html, /瘦身助手/);
++      assert.match(html, new RegExp(expectedText));
++    }
++  } finally {
++    if (child.exitCode === null) {
++      child.kill();
++      await Promise.race([
++        once(child, "exit"),
++        new Promise((resolve) => setTimeout(resolve, 5_000)),
++      ]);
++    }
++    accessDb.cleanup();
++  }
++});
+
+

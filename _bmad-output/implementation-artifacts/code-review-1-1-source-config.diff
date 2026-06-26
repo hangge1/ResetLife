@@ -1,0 +1,1058 @@
+﻿diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..23c6d0c
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,13 @@
++node_modules/
++.next/
++out/
++dist/
++coverage/
++*.tsbuildinfo
++.env
++.env.*
++!.env.example
++npm-debug.log*
++yarn-debug.log*
++yarn-error.log*
++pnpm-debug.log*
+diff --git a/app/globals.css b/app/globals.css
+new file mode 100644
+index 0000000..eb1b486
+--- /dev/null
++++ b/app/globals.css
+@@ -0,0 +1,85 @@
++@import "tailwindcss";
++
++:root {
++  --surface-base: #f7f8fa;
++  --surface-panel: #ffffff;
++  --surface-subtle: #eef2f5;
++  --ink-primary: #18212a;
++  --ink-secondary: #5f6b76;
++  --ink-muted: #8b96a1;
++  --border-soft: #dde4ea;
++  --primary: #2563eb;
++  --primary-foreground: #ffffff;
++  --health: #10b981;
++  --health-soft: #dff8ec;
++  --motion: #0ea5e9;
++  --motion-soft: #e0f2fe;
++  --warning: #f59e0b;
++  --warning-soft: #fef3c7;
++  --danger: #dc2626;
++  --danger-soft: #fee2e2;
++}
++
++* {
++  box-sizing: border-box;
++}
++
++html {
++  background: var(--surface-base);
++  color: var(--ink-primary);
++}
++
++body {
++  margin: 0;
++  min-height: 100vh;
++  background: var(--surface-base);
++  color: var(--ink-primary);
++  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
++  font-size: 14px;
++  line-height: 1.55;
++  letter-spacing: 0;
++}
++
++a {
++  color: inherit;
++  text-decoration: none;
++}
++
++button,
++a {
++  -webkit-tap-highlight-color: transparent;
++}
++
++:focus-visible {
++  outline: 2px solid var(--primary);
++  outline-offset: 2px;
++}
++
++.app-shell {
++  min-height: 100vh;
++  display: grid;
++  grid-template-columns: 220px minmax(0, 1fr);
++}
++
++.page-main {
++  width: 100%;
++  max-width: 1200px;
++  padding: 24px;
++}
++
++.card {
++  background: var(--surface-panel);
++  border: 1px solid var(--border-soft);
++  border-radius: 8px;
++}
++
++@media (max-width: 767px) {
++  .app-shell {
++    display: block;
++    padding-bottom: 72px;
++  }
++
++  .page-main {
++    padding: 16px;
++  }
++}
+diff --git a/app/goals/page.tsx b/app/goals/page.tsx
+new file mode 100644
+index 0000000..b2cd566
+--- /dev/null
++++ b/app/goals/page.tsx
+@@ -0,0 +1,10 @@
++import { PlaceholderPage } from "@/components/layout/placeholder-page";
++
++export default function GoalsPage() {
++  return (
++    <PlaceholderPage
++      title="目标"
++      description="目标页面将在后续故事中支持设置健康目标和每周跑步目标。"
++    />
++  );
++}
+diff --git a/app/history/page.tsx b/app/history/page.tsx
+new file mode 100644
+index 0000000..c4557d2
+--- /dev/null
++++ b/app/history/page.tsx
+@@ -0,0 +1,10 @@
++import { PlaceholderPage } from "@/components/layout/placeholder-page";
++
++export default function HistoryPage() {
++  return (
++    <PlaceholderPage
++      title="历史"
++      description="历史页面将在后续故事中支持查看、筛选、编辑和删除记录。"
++    />
++  );
++}
+diff --git a/app/layout.tsx b/app/layout.tsx
+new file mode 100644
+index 0000000..648448e
+--- /dev/null
++++ b/app/layout.tsx
+@@ -0,0 +1,19 @@
++import type { Metadata } from "next";
++import "./globals.css";
++
++export const metadata: Metadata = {
++  title: "瘦身助手",
++  description: "简洁、数据优先的个人健康与跑步管理界面。",
++};
++
++export default function RootLayout({
++  children,
++}: Readonly<{
++  children: React.ReactNode;
++}>) {
++  return (
++    <html lang="zh-CN">
++      <body>{children}</body>
++    </html>
++  );
++}
+diff --git a/app/page.tsx b/app/page.tsx
+new file mode 100644
+index 0000000..edf56ac
+--- /dev/null
++++ b/app/page.tsx
+@@ -0,0 +1,81 @@
++import { AppShell } from "@/components/layout/app-shell";
++import { Button } from "@/components/ui/button";
++import { StatusCard } from "@/features/dashboard/components/status-card";
++
++const statusItems = [
++  { label: "身体数据", value: "待记录", tone: "warning" },
++  { label: "跑步记录", value: "待添加", tone: "motion" },
++  { label: "提醒状态", value: "未开启提醒", tone: "neutral" },
++];
++
++const metricCards = [
++  {
++    title: "健康摘要",
++    value: "暂无数据",
++    description: "记录体重、围度和体脂率后显示趋势。",
++    tone: "health",
++  },
++  {
++    title: "运动摘要",
++    value: "暂无跑量",
++    description: "添加跑步记录后显示本周跑量和次数。",
++    tone: "motion",
++  },
++  {
++    title: "目标进度",
++    value: "未设置",
++    description: "设置健康目标和跑步目标后显示差距。",
++    tone: "warning",
++  },
++] as const;
++
++export default function Home() {
++  return (
++    <AppShell>
++      <main className="page-main">
++        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
++          <div>
++            <h1 className="m-0 text-[32px] font-semibold leading-tight tracking-normal text-[var(--ink-primary)]">
++              瘦身助手
++            </h1>
++            <p className="mt-2 max-w-2xl text-sm text-[var(--ink-secondary)]">
++              今天先完成记录，再看趋势和目标差距。
++            </p>
++          </div>
++          <Button>记录今天</Button>
++        </div>
++
++        <section aria-labelledby="today-status" className="card mb-4 p-4">
++          <div className="mb-3 flex items-center justify-between gap-3">
++            <h2 id="today-status" className="m-0 text-base font-semibold">
++              今日状态
++            </h2>
++            <span className="rounded-full bg-[var(--warning-soft)] px-3 py-1 text-xs font-semibold text-[#92400e]">
++              待开始
++            </span>
++          </div>
++          <div className="grid gap-2">
++            {statusItems.map((item) => (
++              <div
++                key={item.label}
++                className="flex min-h-11 items-center justify-between border-b border-[var(--border-soft)] py-2 last:border-b-0"
++              >
++                <span className="text-[var(--ink-secondary)]">{item.label}</span>
++                <span className="font-semibold text-[var(--ink-primary)]">{item.value}</span>
++              </div>
++            ))}
++          </div>
++        </section>
++
++        <section
++          aria-label="首页摘要"
++          className="grid grid-cols-1 gap-4 md:grid-cols-3"
++        >
++          {metricCards.map((card) => (
++            <StatusCard key={card.title} {...card} />
++          ))}
++        </section>
++      </main>
++    </AppShell>
++  );
++}
+diff --git a/app/records/page.tsx b/app/records/page.tsx
+new file mode 100644
+index 0000000..13f89a2
+--- /dev/null
++++ b/app/records/page.tsx
+@@ -0,0 +1,10 @@
++import { PlaceholderPage } from "@/components/layout/placeholder-page";
++
++export default function RecordsPage() {
++  return (
++    <PlaceholderPage
++      title="记录"
++      description="今日记录页面将在后续故事中提供健康记录和跑步记录表单。"
++    />
++  );
++}
+diff --git a/app/settings/page.tsx b/app/settings/page.tsx
+new file mode 100644
+index 0000000..aa6d8bf
+--- /dev/null
++++ b/app/settings/page.tsx
+@@ -0,0 +1,10 @@
++import { PlaceholderPage } from "@/components/layout/placeholder-page";
++
++export default function SettingsPage() {
++  return (
++    <PlaceholderPage
++      title="设置"
++      description="设置页面将在后续故事中维护个人资料、提醒、SMTP 和访问保护。"
++    />
++  );
++}
+diff --git a/components.json b/components.json
+new file mode 100644
+index 0000000..4ee62ee
+--- /dev/null
++++ b/components.json
+@@ -0,0 +1,21 @@
++{
++  "$schema": "https://ui.shadcn.com/schema.json",
++  "style": "new-york",
++  "rsc": true,
++  "tsx": true,
++  "tailwind": {
++    "config": "",
++    "css": "app/globals.css",
++    "baseColor": "neutral",
++    "cssVariables": true,
++    "prefix": ""
++  },
++  "aliases": {
++    "components": "@/components",
++    "utils": "@/lib/utils",
++    "ui": "@/components/ui",
++    "lib": "@/lib",
++    "hooks": "@/hooks"
++  },
++  "iconLibrary": "lucide"
++}
+diff --git a/components/layout/app-shell.tsx b/components/layout/app-shell.tsx
+new file mode 100644
+index 0000000..523dd48
+--- /dev/null
++++ b/components/layout/app-shell.tsx
+@@ -0,0 +1,17 @@
++import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
++import { MobileNav } from "@/components/layout/mobile-nav";
++
++export function AppShell({ children }: { children: React.ReactNode }) {
++  return (
++    <div className="app-shell">
++      <DesktopSidebar />
++      <div className="min-w-0">
++        <header className="sticky top-0 z-10 flex min-h-14 items-center border-b border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 md:hidden">
++          <div className="text-base font-bold text-[var(--ink-primary)]">瘦身助手</div>
++        </header>
++        {children}
++        <MobileNav />
++      </div>
++    </div>
++  );
++}
+diff --git a/components/layout/desktop-sidebar.tsx b/components/layout/desktop-sidebar.tsx
+new file mode 100644
+index 0000000..f243cb5
+--- /dev/null
++++ b/components/layout/desktop-sidebar.tsx
+@@ -0,0 +1,31 @@
++import Link from "next/link";
++import { navigationItems } from "@/lib/navigation";
++
++export function DesktopSidebar() {
++  return (
++    <aside className="sticky top-0 hidden h-screen border-r border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 py-6 md:block">
++      <div className="mb-7 text-[17px] font-bold text-[var(--ink-primary)]">瘦身助手</div>
++      <nav aria-label="主导航" className="grid gap-1">
++        {navigationItems.map((item, index) => {
++          const Icon = item.icon;
++          const active = index === 0;
++
++          return (
++            <Link
++              key={item.href}
++              href={item.href}
++              className={
++                active
++                  ? "flex min-h-10 items-center gap-2 rounded-md bg-[#eff6ff] px-3 text-sm font-semibold text-[var(--primary)]"
++                  : "flex min-h-10 items-center gap-2 rounded-md px-3 text-sm font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-subtle)]"
++              }
++            >
++              <Icon aria-hidden="true" className="size-4" />
++              <span>{item.label}</span>
++            </Link>
++          );
++        })}
++      </nav>
++    </aside>
++  );
++}
+diff --git a/components/layout/mobile-nav.tsx b/components/layout/mobile-nav.tsx
+new file mode 100644
+index 0000000..b90ac52
+--- /dev/null
++++ b/components/layout/mobile-nav.tsx
+@@ -0,0 +1,31 @@
++import Link from "next/link";
++import { navigationItems } from "@/lib/navigation";
++
++export function MobileNav() {
++  return (
++    <nav
++      aria-label="移动端主导航"
++      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-[var(--border-soft)] bg-[var(--surface-panel)] md:hidden"
++    >
++      {navigationItems.map((item, index) => {
++        const Icon = item.icon;
++        const active = index === 0;
++
++        return (
++          <Link
++            key={item.href}
++            href={item.href}
++            className={
++              active
++                ? "flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-semibold text-[var(--primary)]"
++                : "flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium text-[var(--ink-secondary)]"
++            }
++          >
++            <Icon aria-hidden="true" className="size-5" />
++            <span>{item.label}</span>
++          </Link>
++        );
++      })}
++    </nav>
++  );
++}
+diff --git a/components/layout/placeholder-page.tsx b/components/layout/placeholder-page.tsx
+new file mode 100644
+index 0000000..2d50066
+--- /dev/null
++++ b/components/layout/placeholder-page.tsx
+@@ -0,0 +1,22 @@
++import { AppShell } from "@/components/layout/app-shell";
++
++type PlaceholderPageProps = {
++  title: string;
++  description: string;
++};
++
++export function PlaceholderPage({ title, description }: PlaceholderPageProps) {
++  return (
++    <AppShell>
++      <main className="page-main">
++        <section className="card p-4">
++          <p className="mb-2 text-sm font-semibold text-[var(--ink-secondary)]">功能占位</p>
++          <h1 className="m-0 text-[28px] font-semibold leading-tight tracking-normal text-[var(--ink-primary)]">
++            {title}
++          </h1>
++          <p className="mt-3 max-w-2xl text-sm text-[var(--ink-secondary)]">{description}</p>
++        </section>
++      </main>
++    </AppShell>
++  );
++}
+diff --git a/components/ui/button.tsx b/components/ui/button.tsx
+new file mode 100644
+index 0000000..e68ca7d
+--- /dev/null
++++ b/components/ui/button.tsx
+@@ -0,0 +1,36 @@
++import * as React from "react";
++import { Slot } from "@radix-ui/react-slot";
++import { cva, type VariantProps } from "class-variance-authority";
++import { cn } from "@/lib/utils";
++
++const buttonVariants = cva(
++  "inline-flex min-h-10 items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50",
++  {
++    variants: {
++      variant: {
++        default: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[#1d4ed8]",
++        secondary:
++          "border border-[var(--border-soft)] bg-[var(--surface-panel)] text-[var(--ink-primary)] hover:bg-[var(--surface-subtle)]",
++      },
++    },
++    defaultVariants: {
++      variant: "default",
++    },
++  },
++);
++
++export interface ButtonProps
++  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
++    VariantProps<typeof buttonVariants> {
++  asChild?: boolean;
++}
++
++const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
++  ({ className, variant, asChild = false, ...props }, ref) => {
++    const Comp = asChild ? Slot : "button";
++    return <Comp className={cn(buttonVariants({ variant, className }))} ref={ref} {...props} />;
++  },
++);
++Button.displayName = "Button";
++
++export { Button, buttonVariants };
+diff --git a/eslint.config.mjs b/eslint.config.mjs
+new file mode 100644
+index 0000000..febc6aa
+--- /dev/null
++++ b/eslint.config.mjs
+@@ -0,0 +1,15 @@
++import { defineConfig, globalIgnores } from "eslint/config";
++import nextVitals from "eslint-config-next/core-web-vitals";
++import nextTs from "eslint-config-next/typescript";
++
++export default defineConfig([
++  ...nextVitals,
++  ...nextTs,
++  globalIgnores([
++    ".next/**",
++    "node_modules/**",
++    "_bmad/**",
++    "_bmad-output/**",
++    "docs/**"
++  ])
++]);
+diff --git a/features/access/components/.gitkeep b/features/access/components/.gitkeep
+new file mode 100644
+index 0000000..8b13789
+--- /dev/null
++++ b/features/access/components/.gitkeep
+@@ -0,0 +1 @@
++
+diff --git a/features/dashboard/components/status-card.tsx b/features/dashboard/components/status-card.tsx
+new file mode 100644
+index 0000000..30c7721
+--- /dev/null
++++ b/features/dashboard/components/status-card.tsx
+@@ -0,0 +1,27 @@
++const toneClass = {
++  health: "bg-[var(--health-soft)] text-[#047857]",
++  motion: "bg-[var(--motion-soft)] text-[#0369a1]",
++  warning: "bg-[var(--warning-soft)] text-[#92400e]",
++} as const;
++
++type StatusCardProps = {
++  title: string;
++  value: string;
++  description: string;
++  tone: keyof typeof toneClass;
++};
++
++export function StatusCard({ title, value, description, tone }: StatusCardProps) {
++  return (
++    <article className="card p-4">
++      <div className="mb-2 flex items-center justify-between gap-3">
++        <h2 className="m-0 text-sm font-semibold text-[var(--ink-secondary)]">{title}</h2>
++        <span className={`rounded-full px-2 py-1 text-xs font-semibold ${toneClass[tone]}`}>
++          {title}
++        </span>
++      </div>
++      <div className="text-[28px] font-bold leading-tight text-[var(--ink-primary)]">{value}</div>
++      <p className="mt-2 text-sm text-[var(--ink-secondary)]">{description}</p>
++    </article>
++  );
++}
+diff --git a/lib/navigation.ts b/lib/navigation.ts
+new file mode 100644
+index 0000000..c1f8932
+--- /dev/null
++++ b/lib/navigation.ts
+@@ -0,0 +1,9 @@
++import { History, Home, ListPlus, Settings, Target } from "lucide-react";
++
++export const navigationItems = [
++  { label: "首页", href: "/", icon: Home },
++  { label: "记录", href: "/records", icon: ListPlus },
++  { label: "历史", href: "/history", icon: History },
++  { label: "目标", href: "/goals", icon: Target },
++  { label: "设置", href: "/settings", icon: Settings },
++] as const;
+diff --git a/lib/utils.ts b/lib/utils.ts
+new file mode 100644
+index 0000000..a5ef193
+--- /dev/null
++++ b/lib/utils.ts
+@@ -0,0 +1,6 @@
++import { clsx, type ClassValue } from "clsx";
++import { twMerge } from "tailwind-merge";
++
++export function cn(...inputs: ClassValue[]) {
++  return twMerge(clsx(inputs));
++}
+diff --git a/next-env.d.ts b/next-env.d.ts
+new file mode 100644
+index 0000000..9edff1c
+--- /dev/null
++++ b/next-env.d.ts
+@@ -0,0 +1,6 @@
++/// <reference types="next" />
++/// <reference types="next/image-types/global" />
++import "./.next/types/routes.d.ts";
++
++// NOTE: This file should not be edited
++// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+diff --git a/next.config.ts b/next.config.ts
+new file mode 100644
+index 0000000..2f6491c
+--- /dev/null
++++ b/next.config.ts
+@@ -0,0 +1,7 @@
++import type { NextConfig } from "next";
++
++const nextConfig: NextConfig = {
++  reactStrictMode: true,
++};
++
++export default nextConfig;
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..dec0953
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,32 @@
++{
++  "name": "slimming-assistant",
++  "version": "0.1.0",
++  "private": true,
++  "scripts": {
++    "dev": "next dev",
++    "build": "next build",
++    "lint": "eslint .",
++    "typecheck": "tsc --noEmit",
++    "test": "node --test tests/*.test.mjs"
++  },
++  "dependencies": {
++    "@radix-ui/react-slot": "^1.2.4",
++    "class-variance-authority": "^0.7.1",
++    "clsx": "^2.1.1",
++    "lucide-react": "^0.532.0",
++    "next": "16.2.9",
++    "react": "^19.2.7",
++    "react-dom": "^19.2.7",
++    "tailwind-merge": "^3.4.0"
++  },
++  "devDependencies": {
++    "@tailwindcss/postcss": "4.3.1",
++    "@types/node": "^24.10.0",
++    "@types/react": "^19.2.0",
++    "@types/react-dom": "^19.2.0",
++    "eslint": "^9.39.0",
++    "eslint-config-next": "16.2.9",
++    "tailwindcss": "4.3.1",
++    "typescript": "6.0.3"
++  }
++}
+diff --git a/postcss.config.mjs b/postcss.config.mjs
+new file mode 100644
+index 0000000..61e3684
+--- /dev/null
++++ b/postcss.config.mjs
+@@ -0,0 +1,7 @@
++const config = {
++  plugins: {
++    "@tailwindcss/postcss": {},
++  },
++};
++
++export default config;
+diff --git a/tests/app-shell.test.mjs b/tests/app-shell.test.mjs
+new file mode 100644
+index 0000000..c4f3bc3
+--- /dev/null
++++ b/tests/app-shell.test.mjs
+@@ -0,0 +1,27 @@
++import assert from "node:assert/strict";
++import { readFileSync } from "node:fs";
++import { test } from "node:test";
++
++const navigationSource = readFileSync("lib/navigation.ts", "utf8");
++const pageSource = readFileSync("app/page.tsx", "utf8");
++const packageSource = JSON.parse(readFileSync("package.json", "utf8"));
++
++test("主导航使用中文页面，并包含固定的五个入口", () => {
++  for (const label of ["首页", "记录", "历史", "目标", "设置"]) {
++    assert.match(navigationSource, new RegExp(`label: "${label}"`));
++  }
++});
++
++test("首页是应用仪表盘，不是营销页面", () => {
++  assert.match(pageSource, /瘦身助手/);
++  assert.match(pageSource, /记录今天/);
++  assert.match(pageSource, /今日状态/);
++  assert.doesNotMatch(pageSource, /landing|hero|pricing|signup/i);
++});
++
++test("基础质量命令存在", () => {
++  assert.equal(packageSource.scripts.typecheck, "tsc --noEmit");
++  assert.ok(packageSource.scripts.lint);
++  assert.ok(packageSource.scripts.build);
++  assert.ok(packageSource.scripts.dev);
++});
+diff --git a/tsconfig.json b/tsconfig.json
+new file mode 100644
+index 0000000..3099c54
+--- /dev/null
++++ b/tsconfig.json
+@@ -0,0 +1,41 @@
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "lib": [
++      "dom",
++      "dom.iterable",
++      "es2022"
++    ],
++    "allowJs": false,
++    "skipLibCheck": true,
++    "strict": true,
++    "noEmit": true,
++    "esModuleInterop": true,
++    "module": "esnext",
++    "moduleResolution": "bundler",
++    "resolveJsonModule": true,
++    "isolatedModules": true,
++    "jsx": "react-jsx",
++    "incremental": true,
++    "plugins": [
++      {
++        "name": "next"
++      }
++    ],
++    "paths": {
++      "@/*": [
++        "./*"
++      ]
++    }
++  },
++  "include": [
++    "next-env.d.ts",
++    "**/*.ts",
++    "**/*.tsx",
++    ".next/types/**/*.ts",
++    ".next/dev/types/**/*.ts"
++  ],
++  "exclude": [
++    "node_modules"
++  ]
++}
+diff --git "a/_bmad-output/implementation-artifacts/1-1-\345\210\235\345\247\213\345\214\226\345\272\224\347\224\250\351\252\250\346\236\266\344\270\216\344\270\255\346\226\207\345\270\203\345\261\200.md" "b/_bmad-output/implementation-artifacts/1-1-\345\210\235\345\247\213\345\214\226\345\272\224\347\224\250\351\252\250\346\236\266\344\270\216\344\270\255\346\226\207\345\270\203\345\261\200.md"
+new file mode 100644
+index 0000000..d0863a1
+--- /dev/null
++++ "b/_bmad-output/implementation-artifacts/1-1-\345\210\235\345\247\213\345\214\226\345\272\224\347\224\250\351\252\250\346\236\266\344\270\216\344\270\255\346\226\207\345\270\203\345\261\200.md"
+@@ -0,0 +1,241 @@
++---
++baseline_commit: 71289d6a95b7748d9e2ab430303ccf3a9f7fed42
++---
++
++# Story 1.1: 初始化应用骨架与中文布局
++
++Status: review
++
++## Story
++
++As a 个人用户,
++I want 打开瘦身助手时看到中文应用框架,
++so that 我可以在统一的受保护界面中使用后续功能。
++
++## Acceptance Criteria
++
++1. Given 项目尚未有应用代码, when 开发者初始化应用, then 应用使用 Next.js、React、TypeScript、Tailwind、shadcn/ui 基础栈。
++2. 页面显示名为“瘦身助手”。
++3. 可见主界面文案为中文。
++4. 桌面端具备左侧导航框架。
++5. 移动端具备可适配的导航结构。
++6. 不出现营销式首页或英文主界面。
++
++## Tasks / Subtasks
++
++- [x] 初始化当前仓库根目录的 Next.js 应用骨架（AC: 1）
++  - [x] 新增 `package.json`、`tsconfig.json`、Next 配置、Tailwind 入口和 App Router 基础文件。
++  - [x] 使用 TypeScript、App Router、Tailwind CSS、ESLint；不要把应用初始化到子目录。
++  - [x] 保留现有 `README.md`、`LICENSE`、`doc/`、`_bmad/`、`_bmad-output/`，不得删除或覆盖规划资料。
++- [x] 建立架构要求的基础目录（AC: 1）
++  - [x] 新增 `app/`、`components/ui/`、`components/layout/`、`features/`、`lib/` 等空或最小可用结构。
++  - [x] 为后续故事预留 `features/access`，但本故事不实现访问密码或数据库。
++- [x] 实现中文应用框架（AC: 2, 3, 4, 5, 6）
++  - [x] 桌面端：左侧常驻导航，包含：首页、记录、历史、目标、设置。
++  - [x] 移动端：顶部标题栏和底部导航，包含：首页、记录、历史、目标、设置。
++  - [x] 首屏是实际仪表盘占位，不做营销式 landing page。
++  - [x] 所有可见主界面文案使用中文；允许保留必要技术词如 `BMI`、`SMTP`。
++- [x] 应用视觉规范（AC: 2-6）
++  - [x] 使用 `DESIGN.md` 的颜色、圆角、间距和数据优先风格。
++  - [x] 页面背景 `#F7F8FA`，卡片 `#FFFFFF`，边框 `#DDE4EA`，主色 `#2563EB`。
++  - [x] 卡片圆角不超过 8px，避免营销 hero、装饰渐变、游戏化动画。
++- [x] 建立基础质量命令（AC: 1）
++  - [x] `npm run dev` 能启动本地开发服务器。
++  - [x] `npm run build` 能完成生产构建。
++  - [x] `npm run lint` 或等价 ESLint 命令可运行。
++  - [x] `npm run typecheck` 执行 `tsc --noEmit`。
++
++## Dev Notes
++
++### Scope
++
++本故事只创建应用骨架和中文响应式布局。不要实现以下内容：
++
++- 访问密码创建、设备信任、cookie/localStorage 校验。
++- SQLite、Drizzle schema、repository。
++- 健康记录、跑步记录、目标、提醒、SMTP。
++- 真实图表、趋势计算、BMI 计算。
++
++后续 Story 1.2 开始处理访问保护数据模型，Story 1.3/1.4 处理访问流程。
++
++### Repository State
++
++当前仓库不是空目录，但没有应用代码：
++
++- 已有：`README.md`、`LICENSE`、`doc/`、`docs/`、`_bmad/`、`_bmad-output/`、`.gitignore`。
++- 未发现：`package.json`、`app/`、`components/`、`features/`、`lib/`。
++
++实现时要在仓库根目录落地应用文件。若使用 `create-next-app`，应先在临时目录生成，再把必要应用文件合并回根目录，避免覆盖现有规划文档。
++
++### Architecture Compliance
++
++必须遵守架构 Spine：
++
++- 使用分层功能切片的模块化单体。
++- `app/` 只负责路由、页面组合和调用未来 server actions / route handlers。
++- `features/*/components` 放功能组件；`components/layout` 放全局布局；`components/ui` 放 shadcn/ui 基础组件。
++- 可见 UI 文案使用中文，显示名为“瘦身助手”。
++- UI 必须继承 `EXPERIENCE.md` 和 `DESIGN.md`；`mockups/key-screens.html` 作为布局参考。
++- MVP 目标是长运行 Node.js 进程，不面向 serverless/edge 初始化。
++
++Suggested initial structure:
++
++```text
++app/
++  layout.tsx
++  page.tsx
++  globals.css
++components/
++  layout/
++    app-shell.tsx
++    desktop-sidebar.tsx
++    mobile-nav.tsx
++  ui/
++features/
++  access/
++    components/
++  dashboard/
++    components/
++lib/
++  cn.ts
++```
++
++不要在本故事创建 `db/`、`integrations/` 或持久化实现，除非脚手架工具创建了无业务含义的基础配置文件。
++
++### UX Requirements
++
++首屏必须像个人健康控制台，而不是宣传页：
++
++- 桌面：左侧常驻导航、内容区域最大宽度约 1200px。
++- 移动：顶部标题栏、底部导航，点击目标至少 44px 高。
++- 首页主操作是“记录今天”，但该按钮可暂时链接到占位状态或禁用说明。
++- 首页可以展示占位卡：今日状态、健康摘要、运动摘要、目标进度。占位内容必须明确是“暂无数据”或“待记录”，不要伪造真实数据。
++- 颜色不能作为唯一信息来源；状态旁要有中文文字。
++- 字体使用 Inter 或系统无衬线字体；不要使用负字距。
++
++### Library / Framework Requirements
++
++Architecture pinned stack:
++
++- Node.js 24.18.0 LTS
++- Next.js 16.2.9
++- React 19.2
++- TypeScript 6.0.3
++- Tailwind CSS 4.3.1
++- shadcn/ui CLI v4
++
++Latest check on 2026-06-26:
++
++- npm lists `next` latest as 16.2.9.
++- npm lists `tailwindcss` latest as 4.3.1.
++- npm lists `typescript` latest as 6.0.3.
++- npm lists `react` latest as 19.2.7; architecture pins React at the 19.2 line, so use React 19.2.x compatible with Next 16.2.9 rather than prerelease/canary packages.
++- Next.js docs state `create-next-app` supports TypeScript, ESLint, Tailwind CSS, App Router, and path aliases; use those defaults where possible.
++- shadcn/ui docs support Next.js setup through `shadcn@latest`; use v4 CLI behavior and do not add unnecessary component packages.
++
++Do not adopt Next.js canary/preview releases or TypeScript 7 previews for this MVP.
++
++### File Structure Requirements
++
++Expected new or updated files include:
++
++- `package.json`
++- `package-lock.json` or selected package manager lockfile
++- `next.config.*`
++- `tsconfig.json`
++- `eslint.config.*` or equivalent current ESLint config
++- `app/layout.tsx`
++- `app/page.tsx`
++- `app/globals.css`
++- `components/layout/*`
++- `components/ui/*` if shadcn initializes base files
++- `lib/utils.ts` or `lib/cn.ts`
++
++Preserve existing docs and planning artifacts. Do not move `_bmad-output` into app source.
++
++### Testing Requirements
++
++Before marking implementation complete, run and record results:
++
++- `npm run typecheck`
++- `npm run lint`
++- `npm run build`
++
++If a command is intentionally unavailable because of current Next.js tooling, add the equivalent command and document it in `package.json`.
++
++### Anti-Patterns to Avoid
++
++- Do not create a marketing home page, hero landing page, fake product copy, or English dashboard.
++- Do not introduce authentication libraries, account systems, Clerk/Auth.js, OAuth, registration, roles, or multi-user concepts.
++- Do not create database schema or fake persistent data in this story.
++- Do not hard-code future business calculations.
++- Do not use decorative gradient blobs, oversized cards, bokeh/orb backgrounds, or game-like streak animations.
++
++### References
++
++- `_bmad-output/planning-artifacts/epics.md` — Story 1.1 acceptance criteria and Epic 1 context.
++- `_bmad-output/planning-artifacts/prds/prd-SlimmingAssistant-2026-06-25/prd.md` — MVP scope, Chinese Web app, single-user access boundary, non-goals.
++- `_bmad-output/planning-artifacts/architecture/architecture-SlimmingAssistant-2026-06-26/ARCHITECTURE-SPINE.md` — AD-1, AD-7, structural seed, stack.
++- `_bmad-output/planning-artifacts/ux-designs/ux-SlimmingAssistant-2026-06-25/DESIGN.md` — visual system.
++- `_bmad-output/planning-artifacts/ux-designs/ux-SlimmingAssistant-2026-06-25/EXPERIENCE.md` — navigation, page behavior, responsive rules.
++- `_bmad-output/planning-artifacts/ux-designs/ux-SlimmingAssistant-2026-06-25/mockups/key-screens.html` — visual layout reference.
++- Next.js installation docs: https://nextjs.org/docs/app/getting-started/installation
++- Next.js create-next-app CLI docs: https://nextjs.org/docs/app/api-reference/cli/create-next-app
++- shadcn/ui Next.js docs: https://ui.shadcn.com/docs/installation/next
++- shadcn CLI v4 changelog: https://ui.shadcn.com/docs/changelog/2026-03-cli-v4
++- npm package pages for current versions: https://www.npmjs.com/package/next, https://www.npmjs.com/package/react, https://www.npmjs.com/package/tailwindcss, https://www.npmjs.com/package/typescript
++
++## Dev Agent Record
++
++### Agent Model Used
++
++GPT-5 Codex
++
++### Debug Log References
++
++- RED: `node --test tests/app-shell.test.mjs` failed before implementation because `lib/navigation.ts` did not exist.
++- GREEN/validation: `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` all passed.
++
++### Completion Notes List
++
++- Ultimate context engine analysis completed - comprehensive developer guide created.
++- Implemented a root-level Next.js 16 App Router project with TypeScript, Tailwind CSS v4, ESLint, and shadcn-style component setup.
++- Added Chinese responsive application shell with desktop sidebar and mobile top/bottom navigation.
++- Added a data-first Chinese dashboard placeholder with honest empty states and no marketing landing page.
++- Added Chinese placeholder routes for 记录、历史、目标、设置 so the navigation framework is usable instead of linking to 404 pages.
++- Added Node built-in tests covering Chinese navigation, dashboard copy, and quality scripts.
++
++### File List
++
++- `.gitignore`
++- `app/globals.css`
++- `app/goals/page.tsx`
++- `app/history/page.tsx`
++- `app/layout.tsx`
++- `app/page.tsx`
++- `app/records/page.tsx`
++- `app/settings/page.tsx`
++- `components.json`
++- `components/layout/app-shell.tsx`
++- `components/layout/desktop-sidebar.tsx`
++- `components/layout/mobile-nav.tsx`
++- `components/layout/placeholder-page.tsx`
++- `components/ui/button.tsx`
++- `eslint.config.mjs`
++- `features/access/components/.gitkeep`
++- `features/dashboard/components/status-card.tsx`
++- `lib/navigation.ts`
++- `lib/utils.ts`
++- `next-env.d.ts`
++- `next.config.ts`
++- `package-lock.json`
++- `package.json`
++- `postcss.config.mjs`
++- `tests/app-shell.test.mjs`
++- `tsconfig.json`
++- `_bmad-output/implementation-artifacts/1-1-初始化应用骨架与中文布局.md`
++- `_bmad-output/implementation-artifacts/sprint-status.yaml`
++
++### Change Log
++
++- 2026-06-26: Implemented Story 1.1 application skeleton, Chinese responsive layout, quality scripts, and validation tests.
+diff --git a/_bmad-output/implementation-artifacts/sprint-status.yaml b/_bmad-output/implementation-artifacts/sprint-status.yaml
+new file mode 100644
+index 0000000..5947795
+--- /dev/null
++++ b/_bmad-output/implementation-artifacts/sprint-status.yaml
+@@ -0,0 +1,81 @@
++# generated: 2026-06-26T00:59:55+08:00
++# last_updated: 2026-06-26T01:11:45+08:00
++# project: SlimmingAssistant
++# project_key: NOKEY
++# tracking_system: file-system
++# story_location: D:\codeProject\SlimmingAssistant\_bmad-output\implementation-artifacts
++
++# STATUS DEFINITIONS:
++# ==================
++# Epic Status:
++#   - backlog: Epic not yet started
++#   - in-progress: Epic actively being worked on
++#   - done: All stories in epic completed
++#
++# Epic Status Transitions:
++#   - backlog -> in-progress: Automatically when first story is created (via create-story)
++#   - in-progress -> done: Manually when all stories reach 'done' status
++#
++# Story Status:
++#   - backlog: Story only exists in epic file
++#   - ready-for-dev: Story file created in stories folder
++#   - in-progress: Developer actively working on implementation
++#   - review: Ready for code review (via Dev's code-review workflow)
++#   - done: Story completed
++#
++# Retrospective Status:
++#   - optional: Can be completed but not required
++#   - done: Retrospective has been completed
++#
++# Action Item Status:
++#   - open: Committed during a retrospective, not yet addressed
++#   - in-progress: Actively being worked on
++#   - done: Completed
++#
++# WORKFLOW NOTES:
++# ===============
++# - Epic transitions to 'in-progress' automatically when first story is created
++# - Stories can be worked in parallel if team capacity allows
++# - Developer typically creates next story after previous one is 'done' to incorporate learnings
++# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
++# - Retrospective appends its action items to action_items; sprint-status surfaces open ones
++
++generated: 2026-06-26T00:59:55+08:00
++last_updated: 2026-06-26T01:11:45+08:00
++project: SlimmingAssistant
++project_key: NOKEY
++tracking_system: file-system
++story_location: D:\codeProject\SlimmingAssistant\_bmad-output\implementation-artifacts
++
++development_status:
++  epic-1: in-progress
++  1-1-初始化应用骨架与中文布局: review
++  1-2-建立本地数据库与访问保护数据模型: backlog
++  1-3-首次访问创建访问密码: backlog
++  1-4-未受信浏览器访问验证与受信设备管理基础: backlog
++  epic-1-retrospective: optional
++  epic-2: backlog
++  2-1-建立健康记录和跑步记录数据模型: backlog
++  2-2-录入和覆盖当天健康记录: backlog
++  2-3-添加当天跑步记录: backlog
++  2-4-浏览和筛选历史记录: backlog
++  2-5-编辑和删除历史记录: backlog
++  epic-2-retrospective: optional
++  epic-3: backlog
++  3-1-建立目标数据模型与读写服务: backlog
++  3-2-设置和展示健康目标: backlog
++  3-3-设置和展示跑步目标: backlog
++  3-4-构建首页今日状态和指标卡: backlog
++  3-5-构建健康趋势跑步趋势和-BMI-展示: backlog
++  3-6-构建目标进度和预计达成时间: backlog
++  3-7-构建数据驱动鼓励文案: backlog
++  epic-3-retrospective: optional
++  epic-4: backlog
++  4-1-建立配置中心基础与设置数据模型: backlog
++  4-2-维护个人资料与-BMI-前置配置: backlog
++  4-3-配置趋势估算最低数据条件: backlog
++  4-4-配置提醒规则并生成站内提醒: backlog
++  4-5-配置-SMTP-并发送测试邮件: backlog
++  4-6-发送邮件提醒并保留失败状态: backlog
++  4-7-管理访问密码和受信设备: backlog
++  epic-4-retrospective: optional

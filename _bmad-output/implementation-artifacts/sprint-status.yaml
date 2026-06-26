@@ -1,0 +1,60 @@
+# generated: 2026-06-26T00:59:55+08:00
+# last_updated: 2026-06-26T07:18:00+08:00
+# project: SlimmingAssistant
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: D:\codeProject\SlimmingAssistant\_bmad-output\implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed
+
+generated: 2026-06-26T00:59:55+08:00
+last_updated: 2026-06-26T07:18:00+08:00
+project: SlimmingAssistant
+project_key: NOKEY
+tracking_system: file-system
+story_location: D:\codeProject\SlimmingAssistant\_bmad-output\implementation-artifacts
+
+development_status:
+  epic-1: done
+  1-1-初始化应用骨架与中文布局: done
+  1-2-建立本地数据库与访问保护数据模型: done
+  1-3-首次访问创建访问密码: done
+  1-4-未受信浏览器访问验证与受信设备管理基础: done
+  epic-1-retrospective: optional
+  epic-2: done
+  2-1-建立健康记录和跑步记录数据模型: done
+  2-2-录入和覆盖当天健康记录: done
+  2-3-添加当天跑步记录: done
+  2-4-浏览和筛选历史记录: done
+  2-5-编辑和删除历史记录: done
+  epic-2-retrospective: optional
+  epic-3: done
+  3-1-建立目标数据模型与读写服务: done
+  3-2-设置和展示健康目标: done
+  3-3-设置和展示跑步目标: done
+  3-4-构建首页今日状态和指标卡: done
+  3-5-构建健康趋势跑步趋势和 BMI 展示: done
+  3-6-构建目标进度和预计达成时间: done
+  3-7-构建数据驱动鼓励文案: done
+  epic-3-retrospective: optional
+  epic-4: done
+  4-1-建立配置中心基础与设置数据模型: done
+  4-2-维护个人资料与 BMI 前置配置: done
+  4-3-配置趋势估算最低数据条件: done
+  4-4-配置提醒规则并生成站内提醒: done
+  4-5-配置 SMTP 并发送测试邮件: done
+  4-6-发送邮件提醒并保留失败状态: done
+  4-7-管理访问密码和受信设备: done
+  epic-4-retrospective: optional

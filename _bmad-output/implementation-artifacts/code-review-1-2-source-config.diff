@@ -1,0 +1,861 @@
+﻿diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..5c5c56a
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1,14 @@
++node_modules/
++.next/
++out/
++dist/
++coverage/
++*.tsbuildinfo
++.env
++.env.*
++!.env.example
++data/
++npm-debug.log*
++yarn-debug.log*
++yarn-error.log*
++pnpm-debug.log*
+
+
+diff --git a/db/client.ts b/db/client.ts
+new file mode 100644
+index 0000000..63cc9ad
+--- /dev/null
++++ b/db/client.ts
+@@ -0,0 +1,40 @@
++import { mkdirSync } from "node:fs";
++import { dirname } from "node:path";
++import Database from "better-sqlite3";
++import { drizzle } from "drizzle-orm/better-sqlite3";
++import * as schema from "./schema.ts";
++
++export type AppDb = ReturnType<typeof createDrizzleClient>;
++type AppConnection = ReturnType<typeof createSqliteConnection>;
++
++const DEFAULT_SQLITE_PATH = "./data/slimming-assistant.sqlite";
++
++function createDrizzleClient(sqlite: Database.Database) {
++  return drizzle(sqlite, { schema });
++}
++
++export function resolveSqlitePath() {
++  return process.env.SQLITE_PATH ?? DEFAULT_SQLITE_PATH;
++}
++
++export function createSqliteConnection(sqlitePath = resolveSqlitePath()) {
++  mkdirSync(dirname(sqlitePath), { recursive: true });
++  const sqlite = new Database(sqlitePath);
++  sqlite.pragma("foreign_keys = ON");
++
++  return {
++    sqlite,
++    db: createDrizzleClient(sqlite),
++  };
++}
++
++let defaultConnection: AppConnection | null = null;
++
++export function getDefaultConnection() {
++  defaultConnection ??= createSqliteConnection();
++  return defaultConnection;
++}
++
++export function getDb() {
++  return getDefaultConnection().db;
++}
+
+
+diff --git a/db/schema.ts b/db/schema.ts
+new file mode 100644
+index 0000000..fe92eee
+--- /dev/null
++++ b/db/schema.ts
+@@ -0,0 +1,28 @@
++import { sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
++
++export const accessSecrets = sqliteTable("access_secrets", {
++  id: text("id").primaryKey(),
++  passwordHash: text("password_hash").notNull(),
++  passwordHashAlgorithm: text("password_hash_algorithm").notNull(),
++  createdAtIso: text("created_at_iso").notNull(),
++  updatedAtIso: text("updated_at_iso").notNull(),
++});
++
++export const trustedDevices = sqliteTable(
++  "trusted_devices",
++  {
++    id: text("id").primaryKey(),
++    deviceIdentifierHash: text("device_identifier_hash").notNull(),
++    displayName: text("display_name"),
++    userAgent: text("user_agent"),
++    createdAtIso: text("created_at_iso").notNull(),
++    lastSeenAtIso: text("last_seen_at_iso").notNull(),
++    revokedAtIso: text("revoked_at_iso"),
++  },
++  (table) => [uniqueIndex("trusted_devices_device_identifier_hash_unique").on(table.deviceIdentifierHash)],
++);
++
++export type AccessSecret = typeof accessSecrets.$inferSelect;
++export type NewAccessSecret = typeof accessSecrets.$inferInsert;
++export type TrustedDevice = typeof trustedDevices.$inferSelect;
++export type NewTrustedDevice = typeof trustedDevices.$inferInsert;
+
+
+diff --git a/db/migrations/0000_stormy_hiroim.sql b/db/migrations/0000_stormy_hiroim.sql
+new file mode 100644
+index 0000000..8f8dc54
+--- /dev/null
++++ b/db/migrations/0000_stormy_hiroim.sql
+@@ -0,0 +1,19 @@
++CREATE TABLE `access_secrets` (
++	`id` text PRIMARY KEY NOT NULL,
++	`password_hash` text NOT NULL,
++	`password_hash_algorithm` text NOT NULL,
++	`created_at_iso` text NOT NULL,
++	`updated_at_iso` text NOT NULL
++);
++--> statement-breakpoint
++CREATE TABLE `trusted_devices` (
++	`id` text PRIMARY KEY NOT NULL,
++	`device_identifier_hash` text NOT NULL,
++	`display_name` text,
++	`user_agent` text,
++	`created_at_iso` text NOT NULL,
++	`last_seen_at_iso` text NOT NULL,
++	`revoked_at_iso` text
++);
++--> statement-breakpoint
++CREATE UNIQUE INDEX `trusted_devices_device_identifier_hash_unique` ON `trusted_devices` (`device_identifier_hash`);
+\ No newline at end of file
+
+
+diff --git a/db/migrations/meta/0000_snapshot.json b/db/migrations/meta/0000_snapshot.json
+new file mode 100644
+index 0000000..671c12a
+--- /dev/null
++++ b/db/migrations/meta/0000_snapshot.json
+@@ -0,0 +1,130 @@
++{
++  "version": "6",
++  "dialect": "sqlite",
++  "id": "263e4488-c515-424f-a440-8b68bac885db",
++  "prevId": "00000000-0000-0000-0000-000000000000",
++  "tables": {
++    "access_secrets": {
++      "name": "access_secrets",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "password_hash": {
++          "name": "password_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "password_hash_algorithm": {
++          "name": "password_hash_algorithm",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "created_at_iso": {
++          "name": "created_at_iso",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "updated_at_iso": {
++          "name": "updated_at_iso",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        }
++      },
++      "indexes": {},
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
++    },
++    "trusted_devices": {
++      "name": "trusted_devices",
++      "columns": {
++        "id": {
++          "name": "id",
++          "type": "text",
++          "primaryKey": true,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "device_identifier_hash": {
++          "name": "device_identifier_hash",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "display_name": {
++          "name": "display_name",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "user_agent": {
++          "name": "user_agent",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        },
++        "created_at_iso": {
++          "name": "created_at_iso",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "last_seen_at_iso": {
++          "name": "last_seen_at_iso",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": true,
++          "autoincrement": false
++        },
++        "revoked_at_iso": {
++          "name": "revoked_at_iso",
++          "type": "text",
++          "primaryKey": false,
++          "notNull": false,
++          "autoincrement": false
++        }
++      },
++      "indexes": {
++        "trusted_devices_device_identifier_hash_unique": {
++          "name": "trusted_devices_device_identifier_hash_unique",
++          "columns": [
++            "device_identifier_hash"
++          ],
++          "isUnique": true
++        }
++      },
++      "foreignKeys": {},
++      "compositePrimaryKeys": {},
++      "uniqueConstraints": {},
++      "checkConstraints": {}
++    }
++  },
++  "views": {},
++  "enums": {},
++  "_meta": {
++    "schemas": {},
++    "tables": {},
++    "columns": {}
++  },
++  "internal": {
++    "indexes": {}
++  }
++}
+\ No newline at end of file
+
+
+diff --git a/db/migrations/meta/_journal.json b/db/migrations/meta/_journal.json
+new file mode 100644
+index 0000000..b28ab65
+--- /dev/null
++++ b/db/migrations/meta/_journal.json
+@@ -0,0 +1,13 @@
++{
++  "version": "7",
++  "dialect": "sqlite",
++  "entries": [
++    {
++      "idx": 0,
++      "version": "6",
++      "when": 1782408740452,
++      "tag": "0000_stormy_hiroim",
++      "breakpoints": true
++    }
++  ]
++}
+\ No newline at end of file
+
+
+diff --git a/drizzle.config.ts b/drizzle.config.ts
+new file mode 100644
+index 0000000..bacfbb4
+--- /dev/null
++++ b/drizzle.config.ts
+@@ -0,0 +1,10 @@
++import { defineConfig } from "drizzle-kit";
++
++export default defineConfig({
++  schema: "./db/schema.ts",
++  out: "./db/migrations",
++  dialect: "sqlite",
++  dbCredentials: {
++    url: process.env.SQLITE_PATH ?? "./data/slimming-assistant.sqlite",
++  },
++});
+
+
+diff --git a/features/access/repositories/access-repository.ts b/features/access/repositories/access-repository.ts
+new file mode 100644
+index 0000000..b36aa58
+--- /dev/null
++++ b/features/access/repositories/access-repository.ts
+@@ -0,0 +1,163 @@
++import { randomUUID } from "node:crypto";
++import { eq } from "drizzle-orm";
++import { getDb, type AppDb } from "../../../db/client.ts";
++import {
++  accessSecrets,
++  type AccessSecret,
++  trustedDevices,
++  type TrustedDevice,
++} from "../../../db/schema.ts";
++
++type RepositoryErrorCode = "duplicate_device" | "database_error";
++
++export type RepositoryError = {
++  code: RepositoryErrorCode;
++  message: string;
++};
++
++export type RepositoryResult<T> =
++  | { ok: true; data: T }
++  | { ok: false; error: RepositoryError };
++
++type SaveAccessSecretInput = {
++  passwordHash: string;
++  passwordHashAlgorithm: string;
++  nowIso: string;
++};
++
++type CreateTrustedDeviceInput = {
++  deviceIdentifierHash: string;
++  displayName?: string | null;
++  userAgent?: string | null;
++  nowIso: string;
++};
++
++function ok<T>(data: T): RepositoryResult<T> {
++  return { ok: true, data };
++}
++
++function fail(error: RepositoryError): RepositoryResult<never> {
++  return { ok: false, error };
++}
++
++function mapRepositoryError(error: unknown): RepositoryError {
++  const message = error instanceof Error ? error.message : String(error);
++
++  if (message.includes("UNIQUE") && message.includes("trusted_devices.device_identifier_hash")) {
++    return { code: "duplicate_device", message: "设备标识已存在" };
++  }
++
++  return { code: "database_error", message: "数据库操作失败" };
++}
++
++export function createAccessRepository(appDb: AppDb = getDb()) {
++  return {
++    getAccessSecret(): RepositoryResult<AccessSecret | null> {
++      try {
++        return ok(appDb.select().from(accessSecrets).limit(1).get() ?? null);
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++
++    saveAccessSecret(input: SaveAccessSecretInput): RepositoryResult<AccessSecret> {
++      try {
++        const current = appDb.select().from(accessSecrets).limit(1).get();
++
++        if (current) {
++          appDb
++            .update(accessSecrets)
++            .set({
++              passwordHash: input.passwordHash,
++              passwordHashAlgorithm: input.passwordHashAlgorithm,
++              updatedAtIso: input.nowIso,
++            })
++            .where(eq(accessSecrets.id, current.id))
++            .run();
++
++          return ok(appDb.select().from(accessSecrets).where(eq(accessSecrets.id, current.id)).get()!);
++        }
++
++        const id = randomUUID();
++        appDb
++          .insert(accessSecrets)
++          .values({
++            id,
++            passwordHash: input.passwordHash,
++            passwordHashAlgorithm: input.passwordHashAlgorithm,
++            createdAtIso: input.nowIso,
++            updatedAtIso: input.nowIso,
++          })
++          .run();
++
++        return ok(appDb.select().from(accessSecrets).where(eq(accessSecrets.id, id)).get()!);
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++
++    createTrustedDevice(input: CreateTrustedDeviceInput): RepositoryResult<TrustedDevice> {
++      try {
++        const id = randomUUID();
++        appDb
++          .insert(trustedDevices)
++          .values({
++            id,
++            deviceIdentifierHash: input.deviceIdentifierHash,
++            displayName: input.displayName ?? null,
++            userAgent: input.userAgent ?? null,
++            createdAtIso: input.nowIso,
++            lastSeenAtIso: input.nowIso,
++            revokedAtIso: null,
++          })
++          .run();
++
++        return ok(appDb.select().from(trustedDevices).where(eq(trustedDevices.id, id)).get()!);
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++
++    findTrustedDeviceByHash(deviceIdentifierHash: string): RepositoryResult<TrustedDevice | null> {
++      try {
++        return ok(
++          appDb
++            .select()
++            .from(trustedDevices)
++            .where(eq(trustedDevices.deviceIdentifierHash, deviceIdentifierHash))
++            .get() ?? null,
++        );
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++
++    touchTrustedDevice(id: string, lastSeenAtIso: string): RepositoryResult<TrustedDevice | null> {
++      try {
++        appDb
++          .update(trustedDevices)
++          .set({ lastSeenAtIso })
++          .where(eq(trustedDevices.id, id))
++          .run();
++
++        return ok(appDb.select().from(trustedDevices).where(eq(trustedDevices.id, id)).get() ?? null);
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++
++    revokeTrustedDevice(id: string, revokedAtIso: string): RepositoryResult<TrustedDevice | null> {
++      try {
++        appDb
++          .update(trustedDevices)
++          .set({ revokedAtIso })
++          .where(eq(trustedDevices.id, id))
++          .run();
++
++        return ok(appDb.select().from(trustedDevices).where(eq(trustedDevices.id, id)).get() ?? null);
++      } catch (error) {
++        return fail(mapRepositoryError(error));
++      }
++    },
++  };
++}
+
+
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..f800a41
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,39 @@
++{
++  "name": "slimming-assistant",
++  "version": "0.1.0",
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "dev": "next dev",
++    "build": "next build",
++    "db:generate": "drizzle-kit generate",
++    "db:migrate": "node scripts/migrate-db.mjs",
++    "lint": "eslint .",
++    "typecheck": "next typegen && tsc --noEmit",
++    "test": "node --test tests/*.test.mjs"
++  },
++  "dependencies": {
++    "@radix-ui/react-slot": "^1.2.4",
++    "better-sqlite3": "^12.11.1",
++    "class-variance-authority": "^0.7.1",
++    "clsx": "^2.1.1",
++    "drizzle-orm": "^0.45.2",
++    "lucide-react": "^0.532.0",
++    "next": "16.2.9",
++    "react": "^19.2.7",
++    "react-dom": "^19.2.7",
++    "tailwind-merge": "^3.4.0"
++  },
++  "devDependencies": {
++    "@tailwindcss/postcss": "4.3.1",
++    "@types/better-sqlite3": "^7.6.13",
++    "@types/node": "^24.10.0",
++    "@types/react": "^19.2.0",
++    "@types/react-dom": "^19.2.0",
++    "drizzle-kit": "^0.31.10",
++    "eslint": "^9.39.0",
++    "eslint-config-next": "16.2.9",
++    "tailwindcss": "4.3.1",
++    "typescript": "6.0.3"
++  }
++}
+
+
+diff --git a/scripts/migrate-db.mjs b/scripts/migrate-db.mjs
+new file mode 100644
+index 0000000..10822af
+--- /dev/null
++++ b/scripts/migrate-db.mjs
+@@ -0,0 +1,19 @@
++import { mkdirSync } from "node:fs";
++import { dirname } from "node:path";
++import Database from "better-sqlite3";
++import { drizzle } from "drizzle-orm/better-sqlite3";
++import { migrate } from "drizzle-orm/better-sqlite3/migrator";
++
++const sqlitePath = process.env.SQLITE_PATH ?? "./data/slimming-assistant.sqlite";
++
++mkdirSync(dirname(sqlitePath), { recursive: true });
++
++const sqlite = new Database(sqlitePath);
++sqlite.pragma("foreign_keys = ON");
++
++try {
++  const db = drizzle(sqlite);
++  migrate(db, { migrationsFolder: "./db/migrations" });
++} finally {
++  sqlite.close();
++}
+
+
+diff --git a/tests/access-repository.test.mjs b/tests/access-repository.test.mjs
+new file mode 100644
+index 0000000..90bd5f8
+--- /dev/null
++++ b/tests/access-repository.test.mjs
+@@ -0,0 +1,102 @@
++import assert from "node:assert/strict";
++import { mkdtempSync, rmSync } from "node:fs";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { test } from "node:test";
++import Database from "better-sqlite3";
++import { drizzle } from "drizzle-orm/better-sqlite3";
++import { migrate } from "drizzle-orm/better-sqlite3/migrator";
++
++import { createAccessRepository } from "../features/access/repositories/access-repository.ts";
++import * as schema from "../db/schema.ts";
++
++function createTempRepository() {
++  const dir = mkdtempSync(join(tmpdir(), "slimming-assistant-"));
++  const sqlitePath = join(dir, "test.sqlite");
++  const sqlite = new Database(sqlitePath);
++  sqlite.pragma("foreign_keys = ON");
++  const db = drizzle(sqlite, { schema });
++  migrate(db, { migrationsFolder: "./db/migrations" });
++
++  return {
++    repository: createAccessRepository(db),
++    sqlite,
++    cleanup() {
++      sqlite.close();
++      rmSync(dir, { recursive: true, force: true });
++    },
++  };
++}
++
++test("访问密码只以哈希元数据保存", () => {
++  const { repository, sqlite, cleanup } = createTempRepository();
++
++  try {
++    const saved = repository.saveAccessSecret({
++      passwordHash: "hash:v1:abc",
++      passwordHashAlgorithm: "test-hash",
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++
++    assert.equal(saved.ok, true);
++
++    const found = repository.getAccessSecret();
++    assert.equal(found.ok, true);
++    assert.equal(found.data?.passwordHash, "hash:v1:abc");
++    assert.equal(found.data?.passwordHashAlgorithm, "test-hash");
++
++    const columns = sqlite.prepare("PRAGMA table_info(access_secrets)").all();
++    const columnNames = columns.map((column) => column.name);
++    assert.deepEqual(columnNames.sort(), [
++      "created_at_iso",
++      "id",
++      "password_hash",
++      "password_hash_algorithm",
++      "updated_at_iso",
++    ]);
++    assert.equal(columnNames.includes("password"), false);
++    assert.equal(columnNames.includes("plain_password"), false);
++  } finally {
++    cleanup();
++  }
++});
++
++test("受信设备保存哈希、保持唯一，并支持撤销", () => {
++  const { repository, cleanup } = createTempRepository();
++
++  try {
++    const first = repository.createTrustedDevice({
++      deviceIdentifierHash: "device-hash-1",
++      displayName: "Windows Chrome",
++      userAgent: "Mozilla/5.0",
++      nowIso: "2026-06-26T00:00:00.000Z",
++    });
++
++    assert.equal(first.ok, true);
++
++    const duplicate = repository.createTrustedDevice({
++      deviceIdentifierHash: "device-hash-1",
++      displayName: "Duplicate",
++      userAgent: null,
++      nowIso: "2026-06-26T00:01:00.000Z",
++    });
++
++    assert.equal(duplicate.ok, false);
++    assert.equal(duplicate.error.code, "duplicate_device");
++
++    const found = repository.findTrustedDeviceByHash("device-hash-1");
++    assert.equal(found.ok, true);
++    assert.equal(found.data?.displayName, "Windows Chrome");
++    assert.equal(found.data?.revokedAtIso, null);
++
++    const touched = repository.touchTrustedDevice(first.data.id, "2026-06-26T00:02:00.000Z");
++    assert.equal(touched.ok, true);
++    assert.equal(touched.data?.lastSeenAtIso, "2026-06-26T00:02:00.000Z");
++
++    const revoked = repository.revokeTrustedDevice(first.data.id, "2026-06-26T00:03:00.000Z");
++    assert.equal(revoked.ok, true);
++    assert.equal(revoked.data?.revokedAtIso, "2026-06-26T00:03:00.000Z");
++  } finally {
++    cleanup();
++  }
++});
+
+
+diff --git a/tests/app-shell.test.mjs b/tests/app-shell.test.mjs
+new file mode 100644
+index 0000000..31d7799
+--- /dev/null
++++ b/tests/app-shell.test.mjs
+@@ -0,0 +1,135 @@
++import assert from "node:assert/strict";
++import { spawn } from "node:child_process";
++import { once } from "node:events";
++import { readFileSync } from "node:fs";
++import { createServer } from "node:net";
++import { test } from "node:test";
++
++const navigationSource = readFileSync("lib/navigation.ts", "utf8");
++const pageSource = readFileSync("app/page.tsx", "utf8");
++const desktopNavSource = readFileSync("components/layout/desktop-sidebar.tsx", "utf8");
++const mobileNavSource = readFileSync("components/layout/mobile-nav.tsx", "utf8");
++const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
++const globalsSource = readFileSync("app/globals.css", "utf8");
++const packageSource = JSON.parse(readFileSync("package.json", "utf8"));
++
++async function getFreePort() {
++  const server = createServer();
++  server.listen(0, "127.0.0.1");
++  await once(server, "listening");
++  const { port } = server.address();
++  server.close();
++  await once(server, "close");
++  return port;
++}
++
++async function waitForReady(baseUrl, child, output) {
++  const deadline = Date.now() + 60_000;
++
++  while (Date.now() < deadline) {
++    if (child.exitCode !== null) {
++      const serverOutput = output.join("");
++      const urls = [...serverOutput.matchAll(/http:\/\/[^\s]+/g)].map(([url]) => url);
++      const existingServerUrl = urls.at(-1);
++
++      if (serverOutput.includes("Another next dev server is already running") && existingServerUrl) {
++        const response = await fetch(existingServerUrl);
++        if (response.ok) {
++          return existingServerUrl;
++        }
++      }
++
++      throw new Error(`Next dev server exited early.\n${serverOutput}`);
++    }
++
++    try {
++      const response = await fetch(baseUrl);
++      if (response.ok) {
++        return baseUrl;
++      }
++    } catch {
++      // Server is still starting.
++    }
++
++    await new Promise((resolve) => setTimeout(resolve, 500));
++  }
++
++  throw new Error(`Next dev server did not become ready.\n${output.join("")}`);
++}
++
++test("主导航使用中文页面，并包含固定的五个入口", () => {
++  for (const label of ["首页", "记录", "历史", "目标", "设置"]) {
++    assert.match(navigationSource, new RegExp(`label: "${label}"`));
++  }
++});
++
++test("首页是应用仪表盘，不是营销页面", () => {
++  assert.match(pageSource, /瘦身助手/);
++  assert.match(pageSource, /记录今天/);
++  assert.match(pageSource, /今日状态/);
++  assert.match(pageSource, /href="\/records"|href: "\/records"/);
++  assert.doesNotMatch(pageSource, /landing|hero|pricing|signup/i);
++});
++
++test("导航、按钮和移动端安全区具备基础交互保护", () => {
++  assert.match(desktopNavSource, /usePathname/);
++  assert.match(mobileNavSource, /usePathname/);
++  assert.match(desktopNavSource, /aria-current/);
++  assert.match(mobileNavSource, /aria-current/);
++  assert.match(buttonSource, /type: type \?\? "button"/);
++  assert.match(mobileNavSource, /safe-area-inset-bottom/);
++  assert.match(globalsSource, /safe-area-inset-bottom/);
++});
++
++test("基础质量命令存在", () => {
++  assert.equal(packageSource.scripts.typecheck, "next typegen && tsc --noEmit");
++  assert.ok(packageSource.scripts.lint);
++  assert.ok(packageSource.scripts.build);
++  assert.ok(packageSource.scripts.dev);
++  assert.ok(packageSource.scripts["db:generate"]);
++  assert.ok(packageSource.scripts["db:migrate"]);
++});
++
++test("主要路由可以通过 Next 实际渲染", { timeout: 90_000 }, async () => {
++  const port = await getFreePort();
++  const baseUrl = `http://127.0.0.1:${port}`;
++  const output = [];
++  const child = spawn(
++    process.execPath,
++    ["node_modules/next/dist/bin/next", "dev", "-p", String(port), "-H", "127.0.0.1"],
++    {
++      env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
++      stdio: ["ignore", "pipe", "pipe"],
++    },
++  );
++
++  child.stdout.on("data", (chunk) => output.push(chunk.toString()));
++  child.stderr.on("data", (chunk) => output.push(chunk.toString()));
++
++  try {
++    const actualBaseUrl = await waitForReady(`${baseUrl}/`, child, output);
++
++    for (const [path, expectedText] of [
++      ["/", "记录今天"],
++      ["/records", "记录"],
++      ["/history", "历史"],
++      ["/goals", "目标"],
++      ["/settings", "设置"],
++    ]) {
++      const response = await fetch(`${actualBaseUrl}${path}`);
++      const html = await response.text();
++
++      assert.equal(response.status, 200, `${path} should render`);
++      assert.match(html, /瘦身助手/);
++      assert.match(html, new RegExp(expectedText));
++    }
++  } finally {
++    if (child.exitCode === null) {
++      child.kill();
++      await Promise.race([
++        once(child, "exit"),
++        new Promise((resolve) => setTimeout(resolve, 5_000)),
++      ]);
++    }
++  }
++});
+
+
+diff --git a/tsconfig.json b/tsconfig.json
+new file mode 100644
+index 0000000..eda6b50
+--- /dev/null
++++ b/tsconfig.json
+@@ -0,0 +1,42 @@
++{
++  "compilerOptions": {
++    "target": "ES2022",
++    "lib": [
++      "dom",
++      "dom.iterable",
++      "es2022"
++    ],
++    "allowJs": false,
++    "skipLibCheck": true,
++    "strict": true,
++    "noEmit": true,
++    "esModuleInterop": true,
++    "module": "esnext",
++    "moduleResolution": "bundler",
++    "resolveJsonModule": true,
++    "isolatedModules": true,
++    "allowImportingTsExtensions": true,
++    "jsx": "react-jsx",
++    "incremental": true,
++    "plugins": [
++      {
++        "name": "next"
++      }
++    ],
++    "paths": {
++      "@/*": [
++        "./*"
++      ]
++    }
++  },
++  "include": [
++    "next-env.d.ts",
++    "**/*.ts",
++    "**/*.tsx",
++    ".next/types/**/*.ts",
++    ".next/dev/types/**/*.ts"
++  ],
++  "exclude": [
++    "node_modules"
++  ]
++}
+
+
