@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createAccessRepository } from "../repositories/access-repository.ts";
 import { createInitialAccessPassword } from "../services/access-service.ts";
+import { shouldUseSecureDeviceCookie } from "../services/cookie-security.ts";
 import { DEVICE_TOKEN_COOKIE } from "../services/device-token.ts";
 import type { CreateAccessPasswordState } from "./access-form-state";
 
@@ -26,7 +27,7 @@ export async function createAccessPasswordAction(
   cookieStore.set(DEVICE_TOKEN_COOKIE, result.deviceToken, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureDeviceCookie(headerStore),
     path: "/",
   });
 

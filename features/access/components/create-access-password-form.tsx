@@ -1,19 +1,13 @@
-"use client";
-
-import { useActionState } from "react";
-import { initialCreateAccessPasswordState } from "../actions/access-form-state";
-import { createAccessPasswordAction } from "../actions/create-access-password";
+import type { CreateAccessPasswordState } from "../actions/access-form-state";
 import { Button } from "@/components/ui/button";
 
-export function CreateAccessPasswordForm() {
-  const [state, formAction, pending] = useActionState(
-    createAccessPasswordAction,
-    initialCreateAccessPasswordState,
-  );
-  const fieldErrors = state?.fieldErrors ?? initialCreateAccessPasswordState.fieldErrors;
+type CreateAccessPasswordFormProps = {
+  fieldErrors?: CreateAccessPasswordState["fieldErrors"];
+};
 
+export function CreateAccessPasswordForm({ fieldErrors = {} }: CreateAccessPasswordFormProps) {
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action="create/submit" className="grid gap-4" method="post">
       {fieldErrors.form ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">
           {fieldErrors.form}
@@ -58,7 +52,7 @@ export function CreateAccessPasswordForm() {
         ) : null}
       </div>
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit">
         创建访问密码
       </Button>
     </form>

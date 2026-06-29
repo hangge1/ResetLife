@@ -1,14 +1,30 @@
 import { redirect } from "next/navigation";
 import { createAccessRepository } from "@/features/access/repositories/access-repository";
 import { hasAccessSecret } from "@/features/access/services/access-service";
+import type { CreateAccessPasswordState } from "@/features/access/actions/access-form-state";
 import { CreateAccessPasswordForm } from "@/features/access/components/create-access-password-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function CreateAccessPasswordPage() {
+type CreateAccessPasswordPageProps = {
+  searchParams?: Promise<{
+    password?: string;
+    confirmPassword?: string;
+    form?: string;
+  }>;
+};
+
+export default async function CreateAccessPasswordPage({ searchParams }: CreateAccessPasswordPageProps) {
   if (await hasAccessSecret(createAccessRepository())) {
     redirect("/");
   }
+
+  const params = await searchParams;
+  const fieldErrors: CreateAccessPasswordState["fieldErrors"] = {
+    password: params?.password,
+    confirmPassword: params?.confirmPassword,
+    form: params?.form,
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] px-4 py-8">
@@ -22,7 +38,7 @@ export default async function CreateAccessPasswordPage() {
             第一次使用前先设置一个访问密码，后续访问会用受信设备识别。
           </p>
         </div>
-        <CreateAccessPasswordForm />
+        <CreateAccessPasswordForm fieldErrors={fieldErrors} />
       </section>
     </main>
   );

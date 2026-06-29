@@ -1,19 +1,13 @@
-"use client";
-
-import { useActionState } from "react";
-import { initialVerifyAccessPasswordState } from "../actions/access-form-state";
-import { verifyAccessPasswordAction } from "../actions/verify-access-password";
+import type { VerifyAccessPasswordState } from "../actions/access-form-state";
 import { Button } from "@/components/ui/button";
 
-export function VerifyAccessPasswordForm() {
-  const [state, formAction, pending] = useActionState(
-    verifyAccessPasswordAction,
-    initialVerifyAccessPasswordState,
-  );
-  const fieldErrors = state?.fieldErrors ?? initialVerifyAccessPasswordState.fieldErrors;
+type VerifyAccessPasswordFormProps = {
+  fieldErrors?: VerifyAccessPasswordState["fieldErrors"];
+};
 
+export function VerifyAccessPasswordForm({ fieldErrors = {} }: VerifyAccessPasswordFormProps) {
   return (
-    <form action={formAction} className="grid gap-4">
+    <form action="verify/submit" className="grid gap-4" method="post">
       {fieldErrors.form ? (
         <p className="rounded-md border border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">
           {fieldErrors.form}
@@ -39,7 +33,7 @@ export function VerifyAccessPasswordForm() {
         ) : null}
       </div>
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit">
         进入瘦身助手
       </Button>
     </form>

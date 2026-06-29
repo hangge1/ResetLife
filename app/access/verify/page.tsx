@@ -3,11 +3,19 @@ import { redirect } from "next/navigation";
 import { createAccessRepository } from "@/features/access/repositories/access-repository";
 import { hasAccessSecret, verifyTrustedDeviceToken } from "@/features/access/services/access-service";
 import { DEVICE_TOKEN_COOKIE } from "@/features/access/services/device-token";
+import type { VerifyAccessPasswordState } from "@/features/access/actions/access-form-state";
 import { VerifyAccessPasswordForm } from "@/features/access/components/verify-access-password-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function VerifyAccessPasswordPage() {
+type VerifyAccessPasswordPageProps = {
+  searchParams?: Promise<{
+    password?: string;
+    form?: string;
+  }>;
+};
+
+export default async function VerifyAccessPasswordPage({ searchParams }: VerifyAccessPasswordPageProps) {
   const repository = createAccessRepository();
 
   if (!(await hasAccessSecret(repository))) {
@@ -18,6 +26,12 @@ export default async function VerifyAccessPasswordPage() {
   if (verifyTrustedDeviceToken(repository, cookieStore.get(DEVICE_TOKEN_COOKIE)?.value ?? null).trusted) {
     redirect("/");
   }
+
+  const params = await searchParams;
+  const fieldErrors: VerifyAccessPasswordState["fieldErrors"] = {
+    password: params?.password,
+    form: params?.form,
+  };
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--surface-base)] px-4 py-8">
@@ -31,7 +45,7 @@ export default async function VerifyAccessPasswordPage() {
             当前浏览器还不是受信设备，请输入访问密码继续。
           </p>
         </div>
-        <VerifyAccessPasswordForm />
+        <VerifyAccessPasswordForm fieldErrors={fieldErrors} />
       </section>
     </main>
   );
