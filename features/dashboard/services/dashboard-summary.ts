@@ -11,6 +11,7 @@ type DashboardSummaryInput = {
   recordsRepository: RecordsRepository;
   goalsRepository: GoalsRepository;
   todayLocalDate: string;
+  includeAnalytics?: boolean;
   heightCm?: number | null;
   estimationThresholds?: {
     minimumDays: number;
@@ -262,6 +263,7 @@ export function createDashboardSummary({
   recordsRepository,
   goalsRepository,
   todayLocalDate,
+  includeAnalytics = true,
   heightCm = null,
   estimationThresholds = { minimumDays: 7, minimumRecords: 3 },
   reminderStatus = "未开启提醒",
@@ -477,6 +479,25 @@ export function createDashboardSummary({
         href: "/records",
         tone: "warning",
       };
+
+  if (!includeAnalytics) {
+    return {
+      localDate: todayLocalDate,
+      focusMetrics,
+      todayBattle,
+      runWeek,
+      antiSlacking,
+      statusItems,
+      metricCards: [],
+      chartPanels: [],
+      progressCards: [],
+      encouragement: {
+        title: todayBattle.title,
+        text: todayBattle.text,
+      },
+    };
+  }
+
   const healthGoalSummary =
     healthGoal?.targetWeightKg == null
       ? null
@@ -663,19 +684,23 @@ export function createDashboardSummary({
       buildVisualMetric(
         "每日跑量",
         "公里",
-        periodDateLabels.map((localDate) => ({
-          localDate,
-          value: periodRunsByDate.get(localDate)?.distanceKm ?? 0,
-        })),
+        periodDateLabels
+          .map((localDate) => {
+            const day = periodRunsByDate.get(localDate);
+            return day && day.count > 0 ? { localDate, value: day.distanceKm } : null;
+          })
+          .filter((point): point is DashboardChartPoint => point != null),
         "motion",
       ),
       buildVisualMetric(
         "跑步次数",
         "次",
-        periodDateLabels.map((localDate) => ({
-          localDate,
-          value: periodRunsByDate.get(localDate)?.count ?? 0,
-        })),
+        periodDateLabels
+          .map((localDate) => {
+            const day = periodRunsByDate.get(localDate);
+            return day && day.count > 0 ? { localDate, value: day.count } : null;
+          })
+          .filter((point): point is DashboardChartPoint => point != null),
         "motion",
       ),
       buildVisualMetric(

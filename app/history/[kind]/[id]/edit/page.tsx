@@ -36,7 +36,7 @@ export default async function EditHistoryRecordPage({ params }: EditHistoryRecor
         <main className="page-main">
           <section className="card p-4">
             <div className="mb-4">
-              <Link className="text-sm text-[var(--primary)]" href="/history">
+              <Link className="text-link text-sm" href="/history">
                 返回历史
               </Link>
               <h1 className="m-0 mt-2 text-[28px] font-semibold leading-tight text-[var(--ink-primary)]">
@@ -66,7 +66,7 @@ export default async function EditHistoryRecordPage({ params }: EditHistoryRecor
         <main className="page-main">
           <section className="card p-4">
             <div className="mb-4">
-              <Link className="text-sm text-[var(--primary)]" href="/history">
+              <Link className="text-link text-sm" href="/history">
                 返回历史
               </Link>
               <h1 className="m-0 mt-2 text-[28px] font-semibold leading-tight text-[var(--ink-primary)]">

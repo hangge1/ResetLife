@@ -94,23 +94,21 @@ export default async function SettingsPage() {
 
   return (
     <AppShell>
-      <main className="page-main">
-        <div className="mb-5">
-          <p className="mb-1 text-sm font-semibold text-[var(--ink-secondary)]">设置</p>
-          <h1 className="m-0 text-[32px] font-semibold leading-tight text-[var(--ink-primary)]">
-            配置中心
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-[var(--ink-secondary)]">
-            这里集中维护个人资料、提醒、邮件、趋势估算和访问保护配置。
+      <main className="workbench-main">
+        <section className="workbench-hero">
+          <p className="workbench-eyebrow">设置中心</p>
+          <h1 className="workbench-title">配置中心</h1>
+          <p className="workbench-description">
+            个人资料、提醒、邮件、趋势估算和访问保护都拆成独立卡片，按需进入对应配置。
           </p>
-        </div>
+        </section>
 
-        <section aria-label="配置分组" className="grid gap-4 lg:grid-cols-2">
+        <section aria-label="配置分组" className="workbench-grid workbench-grid--two">
           {settingGroups.map((group) => (
-            <article className="card p-4" key={group.title}>
+            <article className="workbench-card" key={group.title}>
               <div className="mb-3">
-                <h2 className="m-0 text-lg font-semibold text-[var(--ink-primary)]">{group.title}</h2>
-                <p className="m-0 mt-1 text-sm text-[var(--ink-secondary)]">{group.description}</p>
+                <h2 className="workbench-card-title">{group.title}</h2>
+                <p className="workbench-card-text">{group.description}</p>
               </div>
               {group.title === "个人资料" ? (
                 <ProfileForm initialState={initialProfileState} />

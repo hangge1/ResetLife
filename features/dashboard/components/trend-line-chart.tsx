@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type { DashboardChartMetric, DashboardChartPanel, DashboardChartPeriodOption } from "../services/dashboard-summary";
@@ -12,25 +12,17 @@ type ChartPoint = DashboardChartMetric["points"][number] & {
   y: number;
 };
 
-const chartWidth = 640;
-const chartHeight = 260;
+const chartWidth = 860;
+const chartHeight = 340;
 const chartPadding = {
-  top: 28,
-  right: 24,
-  bottom: 36,
-  left: 56,
+  top: 34,
+  right: 32,
+  bottom: 44,
+  left: 64,
 };
 
 function toneColor(tone: DashboardChartMetric["tone"]) {
-  if (tone === "health") {
-    return "#16a34a";
-  }
-
-  if (tone === "motion") {
-    return "#0284c7";
-  }
-
-  return "#d97706";
+  return "var(--primary)";
 }
 
 function parseLocalDate(localDate: string) {
@@ -127,7 +119,7 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
   );
 
   return (
-    <article className="rounded-md border border-[#d5e4e6] bg-white p-4">
+    <article className="workbench-card">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="m-0 text-base font-semibold text-[var(--ink-primary)]">{panel.title}</h3>
@@ -138,7 +130,7 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
             切换时间范围
           </label>
           <select
-            className="min-h-9 rounded-md border border-[#cbdde0] bg-[#f8fbfb] px-3 text-sm font-semibold text-[var(--ink-primary)]"
+            className="min-h-9 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--ink-primary)]"
             id={`${panel.title}-period`}
             onChange={(event) => {
               const nextPeriodLabel = event.target.value;
@@ -163,7 +155,7 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
             切换曲线指标
           </label>
           <select
-            className="min-h-9 rounded-md border border-[#cbdde0] bg-[#f8fbfb] px-3 text-sm font-semibold text-[var(--ink-primary)]"
+            className="min-h-9 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 text-sm font-semibold text-[var(--ink-primary)]"
             id={`${panel.title}-metric`}
             onChange={(event) => {
               setSelectedLabel(event.target.value);
@@ -181,10 +173,13 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
       </div>
 
       {selectedMetric ? (
-        <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <div className="rounded-md border border-[#d5e4e6] bg-[#f4f8f8] p-3">
-            <p className="m-0 text-sm font-semibold text-[var(--ink-primary)]">{selectedMetric.label}</p>
-            <div className="mt-3 flex items-baseline gap-2">
+        <div className="grid gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] p-4">
+            <div>
+              <p className="m-0 text-sm font-semibold text-[var(--ink-secondary)]">当前指标</p>
+              <p className="m-0 mt-1 text-lg font-black text-[var(--ink-primary)]">{selectedMetric.label}</p>
+            </div>
+            <div className="flex items-baseline gap-2">
               <span className="text-[32px] font-bold leading-none text-[var(--ink-primary)]">
                 {selectedMetric.value}
               </span>
@@ -192,14 +187,14 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                 <span className="text-sm font-semibold text-[var(--ink-secondary)]">{selectedMetric.unit}</span>
               ) : null}
             </div>
-            <p className="m-0 mt-2 text-sm text-[var(--ink-secondary)]">{selectedMetric.change}</p>
+            <p className="m-0 text-sm font-semibold text-[var(--ink-secondary)]">{selectedMetric.change}</p>
           </div>
 
-          <div className="min-h-80 overflow-hidden rounded-md border border-[#d5e4e6] bg-[#fbfdfd] p-3">
+          <div className="min-h-[390px] overflow-hidden rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] p-4">
             {chart.path ? (
               <svg
                 aria-label={`${panel.title}-${selectedMetric.label}曲线`}
-                className="h-72 w-full"
+                className="h-[360px] w-full"
                 preserveAspectRatio="xMidYMid meet"
                 role="img"
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
@@ -207,7 +202,7 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                 {chart.axisLabels.map((axis) => (
                   <g key={axis.label}>
                     <line
-                      stroke="#dbe8ea"
+                      stroke="rgba(47,109,179,0.16)"
                       strokeDasharray="4 4"
                       strokeWidth="1"
                       x1={chartPadding.left}
@@ -227,7 +222,7 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                   </g>
                 ))}
                 <line
-                  stroke="#dbe8ea"
+                  stroke="rgba(47,109,179,0.16)"
                   strokeWidth="1"
                   x1={chartPadding.left}
                   x2={chartPadding.left}
@@ -235,26 +230,26 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                   y2={chartHeight - chartPadding.bottom}
                 />
                 <line
-                  stroke="#dbe8ea"
+                  stroke="rgba(47,109,179,0.16)"
                   strokeWidth="1"
                   x1={chartPadding.left}
                   x2={chartWidth - chartPadding.right}
                   y1={chartHeight - chartPadding.bottom}
                   y2={chartHeight - chartPadding.bottom}
                 />
-                <path d={chart.path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+                <path d={chart.path} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" />
                 {chart.points.map((point) => (
                   <circle
                     aria-label={`${point.localDate}：${formatAxisValue(point.value)}${selectedMetric.unit}`}
                     cx={point.x}
                     cy={point.y}
-                    fill={activePoint?.localDate === point.localDate ? color : "white"}
+                    fill={activePoint?.localDate === point.localDate ? color : "var(--surface-base)"}
                     key={point.localDate}
                     onBlur={() => setActivePoint(null)}
                     onFocus={() => setActivePoint(point)}
                     onMouseEnter={() => setActivePoint(point)}
                     onMouseLeave={() => setActivePoint(null)}
-                    r={activePoint?.localDate === point.localDate ? 6 : 4}
+                    r={activePoint?.localDate === point.localDate ? 7 : 5}
                     stroke={color}
                     strokeWidth="2"
                     tabIndex={0}
@@ -272,17 +267,17 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                       y2={chartHeight - chartPadding.bottom}
                     />
                     <rect
-                      fill="#12333c"
+                      fill="var(--surface-base)"
                       height="38"
                       rx="6"
                       width="120"
                       x={tooltipX(activePoint)}
                       y={tooltipY(activePoint)}
                     />
-                    <text fill="white" fontSize="12" x={tooltipX(activePoint) + 10} y={tooltipY(activePoint) + 15}>
+                    <text fill="var(--ink-primary)" fontSize="12" x={tooltipX(activePoint) + 10} y={tooltipY(activePoint) + 15}>
                       {activePoint.localDate}
                     </text>
-                    <text fill="white" fontSize="12" fontWeight="700" x={tooltipX(activePoint) + 10} y={tooltipY(activePoint) + 31}>
+                    <text fill="var(--ink-primary)" fontSize="12" fontWeight="700" x={tooltipX(activePoint) + 10} y={tooltipY(activePoint) + 31}>
                       {formatAxisValue(activePoint.value)} {selectedMetric.unit}
                     </text>
                   </g>
@@ -295,17 +290,20 @@ export function TrendLineChart({ panel }: TrendLineChartProps) {
                 </text>
               </svg>
             ) : (
-              <div className="flex h-72 items-center justify-center px-4 text-center text-sm text-[var(--ink-secondary)]">
+              <div className="flex h-[360px] items-center justify-center px-4 text-center text-sm text-[var(--ink-secondary)]">
                 暂无可绘制数据
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="flex min-h-72 items-center justify-center rounded-md border border-[#d5e4e6] bg-[#f4f8f8] text-sm text-[var(--ink-secondary)]">
+        <div className="flex min-h-72 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] text-sm text-[var(--ink-secondary)]">
           暂无可绘制数据
         </div>
       )}
     </article>
   );
 }
+
+
+

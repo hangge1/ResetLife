@@ -52,15 +52,21 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
 
   return (
     <AppShell>
-      <main className="page-main">
-        <div className="grid gap-4">
-          <section className="card p-4">
+      <main className="workbench-main">
+        <section className="workbench-hero">
+          <p className="workbench-eyebrow">记录卡片流</p>
+          <h1 className="workbench-title">历史记录</h1>
+          <p className="workbench-description">
+            精确查询每一次健康和跑步打卡，点击记录卡片进入编辑。
+          </p>
+        </section>
+
+        <div className="workbench-grid">
+          <section className="workbench-card">
             <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="mb-1 text-sm font-semibold text-[var(--ink-secondary)]">记录回顾</p>
-                <h1 className="m-0 text-[28px] font-semibold leading-tight text-[var(--ink-primary)]">
-                  历史记录
-                </h1>
+                <h2 className="workbench-card-title">筛选和补录</h2>
+                <p className="workbench-card-text">先筛选记录；需要补录时选择日期跳到打卡页。</p>
               </div>
               <form action="/records" className="flex flex-col gap-2 sm:flex-row sm:items-end" method="get">
                 <div className="grid gap-2">
@@ -166,20 +172,20 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
           ) : null}
 
           {entries.length > 0 ? (
-            <section className="grid gap-3">
+            <section className="workbench-grid workbench-grid--two">
               {entries.map((entry) => (
-                <article className="card p-4" key={`${entry.kind}-${entry.id}`}>
+                <article className={`workbench-card ${entry.kind === "health" ? "workbench-card--health" : "workbench-card--motion"}`} key={`${entry.kind}-${entry.id}`}>
                   <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="m-0 text-sm text-[var(--ink-secondary)]">{entry.localDate}</p>
-                      <h2 className="m-0 text-lg font-semibold text-[var(--ink-primary)]">{entry.title}</h2>
+                      <h2 className="workbench-card-title">{entry.title}</h2>
                     </div>
                     <div className="flex flex-wrap items-start gap-2 sm:justify-end">
                       <span className="min-h-10 rounded-md bg-[var(--surface-subtle)] px-3 py-2 text-sm text-[var(--ink-secondary)]">
                         {entry.kind === "health" ? "健康" : "跑步"}
                       </span>
                       <Link
-                        className="inline-flex min-h-10 items-center rounded-md border border-[var(--border-soft)] px-3 text-sm font-semibold text-[var(--ink-primary)]"
+                        className="clickable-surface inline-flex min-h-10 items-center rounded-md border border-[var(--border-soft)] bg-white px-3 text-sm font-semibold text-[var(--ink-primary)] hover:text-[var(--primary)]"
                         href={`/history/${entry.kind}/${entry.id}/edit`}
                       >
                         编辑
@@ -200,6 +206,12 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
                       </details>
                     </div>
                   </div>
+                  <Link
+                    className="mb-3 inline-flex text-sm font-black text-[var(--primary)] hover:underline"
+                    href={`/history/${entry.kind}/${entry.id}/edit`}
+                  >
+                    打开详情
+                  </Link>
                   <div className="flex flex-wrap gap-2">
                     {entry.metrics.length > 0 ? (
                       entry.metrics.map((metric) => (
@@ -218,7 +230,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
               ))}
             </section>
           ) : (
-            <section className="card p-4">
+            <section className="workbench-card">
               <p className="m-0 text-sm text-[var(--ink-secondary)]">没有历史记录</p>
             </section>
           )}

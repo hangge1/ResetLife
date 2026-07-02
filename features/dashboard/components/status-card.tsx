@@ -1,13 +1,13 @@
-const toneClass = {
-  health: "bg-[#e7f7ed] text-[#15803d]",
-  motion: "bg-[#e3f2fb] text-[#0369a1]",
-  warning: "bg-[#fff4df] text-[#b45309]",
+﻿const toneClass = {
+  health: "bg-[rgba(47,109,179,0.12)] text-[var(--primary)]",
+  motion: "bg-[rgba(47,109,179,0.12)] text-[var(--primary)]",
+  warning: "bg-[rgba(47,109,179,0.12)] text-[var(--primary)]",
 } as const;
 
 const borderClass = {
-  health: "border-l-[#22c55e]",
-  motion: "border-l-[#0284c7]",
-  warning: "border-l-[#f59e0b]",
+  health: "border-l-[var(--primary)]",
+  motion: "border-l-[var(--primary)]",
+  warning: "border-l-[var(--primary)]",
 } as const;
 
 type StatusCardProps = {
@@ -20,7 +20,7 @@ type StatusCardProps = {
 
 export function StatusCard({ title, value, unit = "", description, tone }: StatusCardProps) {
   return (
-    <article className={`rounded-md border border-[var(--border-soft)] border-l-4 bg-white p-4 ${borderClass[tone]}`}>
+    <article className={`workbench-card border-l-4 ${borderClass[tone]}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
         <h2 className="m-0 text-sm font-semibold text-[var(--ink-secondary)]">{title}</h2>
         <span className={`rounded-full px-2 py-1 text-xs font-semibold ${toneClass[tone]}`}>
@@ -35,3 +35,5 @@ export function StatusCard({ title, value, unit = "", description, tone }: Statu
     </article>
   );
 }
+
+

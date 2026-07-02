@@ -46,18 +46,16 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
 
   return (
     <AppShell>
-      <main className="page-main">
-        <div className="grid gap-4">
-          <section className="flex flex-col gap-4 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] p-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="m-0 text-[28px] font-semibold leading-tight text-[var(--ink-primary)]">
-                今日打卡
-              </h1>
-              <p className="m-0 mt-1 text-sm text-[var(--ink-secondary)]">
-                先完成跑步打卡，再补健康打卡；补录时在对应卡片内选择日期。
-              </p>
-            </div>
-          </section>
+      <main className="workbench-main">
+        <section className="workbench-hero">
+          <p className="workbench-eyebrow">打卡工作台</p>
+          <h1 className="workbench-title">今天的数据，今天留下证据</h1>
+          <p className="workbench-description">
+            跑步和健康分开记录；补录时只需要在卡片内切换日期。
+          </p>
+        </section>
+
+        <div className="workbench-grid">
 
           {dateValidation.ok ? null : (
             <p className="m-0 rounded-md border border-[var(--danger)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger)]">
@@ -65,15 +63,13 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
             </p>
           )}
 
-          <section aria-label="记录表单" className="grid grid-cols-1 gap-4">
-            <article className="card p-4">
-              <div className="grid max-w-xl gap-4">
+          <section aria-label="记录表单" className="workbench-grid workbench-grid--two">
+            <article className="workbench-card workbench-card--health">
+              <div className="grid gap-4">
                 <div className="grid gap-3">
-                  <h2 className="m-0 text-lg font-semibold text-[var(--ink-primary)]">健康打卡</h2>
+                  <h2 className="workbench-card-title">健康打卡</h2>
                   <RecordDatePicker id="healthRecordDate" localDate={localDate} />
-                  <p className="m-0 text-sm text-[var(--ink-secondary)]">
-                    提交体重、围度和体脂率；同一天重复提交会覆盖当天健康打卡。
-                  </p>
+                  <p className="workbench-card-text">提交体重、腰围和体脂率；同一天重复提交会覆盖当天健康打卡。</p>
                 </div>
                 <HealthRecordForm initialState={initialState} localDate={localDate} />
 
@@ -82,11 +78,23 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
                     {localDate === todayLocalDate ? "今日健康打卡" : "当日健康打卡"}
                   </p>
                   {selectedHealthRecord ? (
-                    <div className="grid gap-2 rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] px-3 py-2 text-sm">
-                      <span>{selectedHealthRecord.weightKg == null ? "体重未填" : `${selectedHealthRecord.weightKg} 公斤`}</span>
-                      <span>{selectedHealthRecord.waistCm == null ? "腰围未填" : `${selectedHealthRecord.waistCm} 厘米`}</span>
-                      <span>{selectedHealthRecord.hipCm == null ? "臀围未填" : `${selectedHealthRecord.hipCm} 厘米`}</span>
-                      <span>{selectedHealthRecord.bodyFatPercentage == null ? "体脂率未填" : `${selectedHealthRecord.bodyFatPercentage}%`}</span>
+                    <div className="mini-metric-grid">
+                      <div className="mini-metric">
+                        <p className="mini-metric-label">体重</p>
+                        <p className="mini-metric-value">{selectedHealthRecord.weightKg == null ? "未填" : `${selectedHealthRecord.weightKg} 公斤`}</p>
+                      </div>
+                      <div className="mini-metric">
+                        <p className="mini-metric-label">腰围</p>
+                        <p className="mini-metric-value">{selectedHealthRecord.waistCm == null ? "未填" : `${selectedHealthRecord.waistCm} 厘米`}</p>
+                      </div>
+                      <div className="mini-metric">
+                        <p className="mini-metric-label">臀围</p>
+                        <p className="mini-metric-value">{selectedHealthRecord.hipCm == null ? "未填" : `${selectedHealthRecord.hipCm} 厘米`}</p>
+                      </div>
+                      <div className="mini-metric">
+                        <p className="mini-metric-label">体脂率</p>
+                        <p className="mini-metric-value">{selectedHealthRecord.bodyFatPercentage == null ? "未填" : `${selectedHealthRecord.bodyFatPercentage}%`}</p>
+                      </div>
                     </div>
                   ) : (
                     <p className="m-0 text-sm text-[var(--ink-secondary)]">当前日期还没有健康打卡</p>
@@ -95,14 +103,12 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
               </div>
             </article>
 
-            <article className="card p-4">
-              <div className="grid max-w-2xl gap-4">
+            <article className="workbench-card workbench-card--motion">
+              <div className="grid gap-4">
                 <div className="grid gap-3">
-                  <h2 className="m-0 text-lg font-semibold text-[var(--ink-primary)]">跑步打卡</h2>
+                  <h2 className="workbench-card-title">跑步打卡</h2>
                   <RecordDatePicker id="runRecordDate" localDate={localDate} />
-                  <p className="m-0 text-sm text-[var(--ink-secondary)]">
-                    提交一次跑步数据；同一天可以保存多条跑步打卡。
-                  </p>
+                  <p className="workbench-card-text">提交一次跑步数据；同一天可以保存多条跑步打卡。</p>
                 </div>
                 <RunRecordForm initialState={initialRunRecordFormState} localDate={localDate} />
 
@@ -114,13 +120,25 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
                     <div className="grid gap-2">
                       {todayRuns.map((record) => (
                         <div
-                          className="grid gap-1 rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] px-3 py-2 text-sm sm:grid-cols-2"
+                          className="mini-metric-grid rounded-md border border-[var(--border-soft)] bg-white/60 p-3"
                           key={record.id}
                         >
-                          <span>{record.distanceKm} 公里</span>
-                          <span>{record.durationSeconds == null ? "时长未填" : `${Math.round(record.durationSeconds / 60)} 分钟`}</span>
-                          <span>{record.paceSecondsPerKm == null ? "配速未填" : `${Math.round((record.paceSecondsPerKm / 60) * 10) / 10} 分钟/公里`}</span>
-                          <span>{record.averageHeartRateBpm == null ? "心率未填" : `${record.averageHeartRateBpm} 次/分`}</span>
+                          <div>
+                            <p className="mini-metric-label">距离</p>
+                            <p className="mini-metric-value">{record.distanceKm} 公里</p>
+                          </div>
+                          <div>
+                            <p className="mini-metric-label">时长</p>
+                            <p className="mini-metric-value">{record.durationSeconds == null ? "未填" : `${Math.round(record.durationSeconds / 60)} 分钟`}</p>
+                          </div>
+                          <div>
+                            <p className="mini-metric-label">配速</p>
+                            <p className="mini-metric-value">{record.paceSecondsPerKm == null ? "未填" : `${Math.round((record.paceSecondsPerKm / 60) * 10) / 10} 分钟/公里`}</p>
+                          </div>
+                          <div>
+                            <p className="mini-metric-label">心率</p>
+                            <p className="mini-metric-value">{record.averageHeartRateBpm == null ? "未填" : `${record.averageHeartRateBpm} 次/分`}</p>
+                          </div>
                         </div>
                       ))}
                     </div>
