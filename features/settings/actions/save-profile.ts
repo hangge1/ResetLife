@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { parseProfileFormValues } from "../services/profile-input.ts";
 import { saveProfileSettings } from "../services/profile-settings-service.ts";
 import { profileToFormValues, type ProfileFormState } from "./profile-form-state";
@@ -19,7 +19,7 @@ export async function saveProfileAction(
   _previousState: ProfileFormState,
   formData: FormData,
 ): Promise<ProfileFormState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
   const values = formDataToValues(formData);
   const parsed = parseProfileFormValues(values);
@@ -31,7 +31,7 @@ export async function saveProfileAction(
     };
   }
 
-  const saved = saveProfileSettings(createSettingsRepository(), {
+  const saved = saveProfileSettings(createSettingsRepositoryForAuth(auth), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

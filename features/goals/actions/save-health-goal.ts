@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createGoalsRepository } from "../repositories/goals-repository.ts";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createGoalsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { saveHealthGoal } from "../services/goals-service.ts";
 import { parseHealthGoalFormValues } from "../services/health-goal-input.ts";
 import { healthGoalToFormValues, type HealthGoalFormState } from "./health-goal-form-state";
@@ -20,7 +20,7 @@ export async function saveHealthGoalAction(
   _previousState: HealthGoalFormState,
   formData: FormData,
 ): Promise<HealthGoalFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const values = formDataToValues(formData);
   const parsed = parseHealthGoalFormValues(values);
@@ -32,7 +32,7 @@ export async function saveHealthGoalAction(
     };
   }
 
-  const saved = saveHealthGoal(createGoalsRepository(), {
+  const saved = saveHealthGoal(createGoalsRepositoryForAuth(auth), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

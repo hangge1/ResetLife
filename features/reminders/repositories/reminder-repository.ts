@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb, type AppDb } from "../../../db/client.ts";
 import { reminderEvents, type ReminderEvent } from "../../../db/schema.ts";
+import { DEFAULT_ADMIN_USER_ID } from "../../access/services/auth-context.ts";
 
 export type ReminderChannel = "in_app" | "email";
 export type ReminderStatus = "created" | "sent" | "failed" | "skipped";
@@ -34,15 +35,16 @@ function fail(): ReminderRepositoryResult<never> {
   return { ok: false, error: { code: "database_error", message: "提醒数据操作失败" } };
 }
 
-function eventWhere(localDate: string, reminderType: string, channel: ReminderChannel) {
+function eventWhere(userId: string, localDate: string, reminderType: string, channel: ReminderChannel) {
   return and(
+    eq(reminderEvents.userId, userId),
     eq(reminderEvents.localDate, localDate),
     eq(reminderEvents.reminderType, reminderType),
     eq(reminderEvents.channel, channel),
   );
 }
 
-export function createReminderRepository(appDb: AppDb = getDb()) {
+export function createReminderRepository(appDb: AppDb = getDb(), userId = DEFAULT_ADMIN_USER_ID) {
   return {
     getReminderEvent(
       localDate: string,
@@ -50,7 +52,13 @@ export function createReminderRepository(appDb: AppDb = getDb()) {
       channel: ReminderChannel,
     ): ReminderRepositoryResult<ReminderEvent | null> {
       try {
-        return ok(appDb.select().from(reminderEvents).where(eventWhere(localDate, reminderType, channel)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(reminderEvents)
+            .where(eventWhere(userId, localDate, reminderType, channel))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }
@@ -62,7 +70,7 @@ export function createReminderRepository(appDb: AppDb = getDb()) {
           appDb
             .select()
             .from(reminderEvents)
-            .where(eq(reminderEvents.channel, "email"))
+            .where(and(eq(reminderEvents.userId, userId), eq(reminderEvents.channel, "email")))
             .orderBy(desc(reminderEvents.updatedAtIso))
             .get() ?? null,
         );
@@ -76,7 +84,7 @@ export function createReminderRepository(appDb: AppDb = getDb()) {
         const existing = appDb
           .select()
           .from(reminderEvents)
-          .where(eventWhere(input.localDate, input.reminderType, input.channel))
+          .where(eventWhere(userId, input.localDate, input.reminderType, input.channel))
           .get();
 
         if (existing) {
@@ -88,6 +96,7 @@ export function createReminderRepository(appDb: AppDb = getDb()) {
           .insert(reminderEvents)
           .values({
             id,
+            userId,
             localDate: input.localDate,
             reminderType: input.reminderType,
             channel: input.channel,
@@ -113,10 +122,16 @@ export function createReminderRepository(appDb: AppDb = getDb()) {
             message: input.message,
             updatedAtIso: input.nowIso,
           })
-          .where(eq(reminderEvents.id, input.id))
+          .where(and(eq(reminderEvents.userId, userId), eq(reminderEvents.id, input.id)))
           .run();
 
-        return ok(appDb.select().from(reminderEvents).where(eq(reminderEvents.id, input.id)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(reminderEvents)
+            .where(and(eq(reminderEvents.userId, userId), eq(reminderEvents.id, input.id)))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }

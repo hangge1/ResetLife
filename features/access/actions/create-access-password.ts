@@ -2,10 +2,10 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createAccessRepository } from "../repositories/access-repository.ts";
-import { createInitialAccessPassword } from "../services/access-service.ts";
+import { createUserRepository } from "../repositories/user-repository.ts";
+import { USER_SESSION_COOKIE } from "../services/auth-context.ts";
 import { shouldUseSecureDeviceCookie } from "../services/cookie-security.ts";
-import { DEVICE_TOKEN_COOKIE } from "../services/device-token.ts";
+import { createInitialAdminUser } from "../services/user-auth-service.ts";
 import type { CreateAccessPasswordState } from "./access-form-state";
 
 export async function createAccessPasswordAction(
@@ -13,10 +13,10 @@ export async function createAccessPasswordAction(
   formData: FormData,
 ): Promise<CreateAccessPasswordState> {
   const headerStore = await headers();
-  const result = await createInitialAccessPassword(createAccessRepository(), {
+  const result = await createInitialAdminUser(createUserRepository(), {
+    username: String(formData.get("username") ?? ""),
     password: String(formData.get("password") ?? ""),
     confirmPassword: String(formData.get("confirmPassword") ?? ""),
-    userAgent: headerStore.get("user-agent"),
   });
 
   if (!result.ok) {
@@ -24,11 +24,12 @@ export async function createAccessPasswordAction(
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(DEVICE_TOKEN_COOKIE, result.deviceToken, {
+  cookieStore.set(USER_SESSION_COOKIE, result.sessionToken, {
     httpOnly: true,
     sameSite: "lax",
     secure: shouldUseSecureDeviceCookie(headerStore),
     path: "/",
+    expires: new Date(result.expiresAtIso),
   });
 
   redirect("/");

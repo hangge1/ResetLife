@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, type AppDb } from "../../../db/client.ts";
 import { goals, type Goal } from "../../../db/schema.ts";
+import { DEFAULT_ADMIN_USER_ID } from "../../access/services/auth-context.ts";
 
 export type GoalType = "health" | "run";
 
@@ -36,11 +37,11 @@ function fail(): GoalsRepositoryResult<never> {
   return { ok: false, error: { code: "database_error", message: "目标数据操作失败" } };
 }
 
-export function createGoalsRepository(appDb: AppDb = getDb()) {
+export function createGoalsRepository(appDb: AppDb = getDb(), userId = DEFAULT_ADMIN_USER_ID) {
   return {
     getGoalByType(type: GoalType): GoalsRepositoryResult<Goal | null> {
       try {
-        return ok(appDb.select().from(goals).where(eq(goals.type, type)).get() ?? null);
+        return ok(appDb.select().from(goals).where(and(eq(goals.userId, userId), eq(goals.type, type))).get() ?? null);
       } catch {
         return fail();
       }
@@ -48,7 +49,7 @@ export function createGoalsRepository(appDb: AppDb = getDb()) {
 
     listGoals(): GoalsRepositoryResult<Goal[]> {
       try {
-        return ok(appDb.select().from(goals).all());
+        return ok(appDb.select().from(goals).where(eq(goals.userId, userId)).all());
       } catch {
         return fail();
       }
@@ -56,7 +57,7 @@ export function createGoalsRepository(appDb: AppDb = getDb()) {
 
     saveHealthGoal(input: SaveHealthGoalInput): GoalsRepositoryResult<Goal> {
       try {
-        const existing = appDb.select().from(goals).where(eq(goals.type, "health")).get();
+        const existing = appDb.select().from(goals).where(and(eq(goals.userId, userId), eq(goals.type, "health"))).get();
 
         if (existing) {
           appDb
@@ -81,6 +82,7 @@ export function createGoalsRepository(appDb: AppDb = getDb()) {
           .insert(goals)
           .values({
             id,
+            userId,
             type: "health",
             targetWeightKg: input.targetWeightKg,
             targetWaistCm: input.targetWaistCm ?? null,
@@ -101,7 +103,7 @@ export function createGoalsRepository(appDb: AppDb = getDb()) {
 
     saveRunGoal(input: SaveRunGoalInput): GoalsRepositoryResult<Goal> {
       try {
-        const existing = appDb.select().from(goals).where(eq(goals.type, "run")).get();
+        const existing = appDb.select().from(goals).where(and(eq(goals.userId, userId), eq(goals.type, "run"))).get();
 
         if (existing) {
           appDb
@@ -126,6 +128,7 @@ export function createGoalsRepository(appDb: AppDb = getDb()) {
           .insert(goals)
           .values({
             id,
+            userId,
             type: "run",
             targetWeightKg: null,
             targetWaistCm: null,

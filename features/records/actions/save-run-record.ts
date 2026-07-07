@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { getTodayLocalDate } from "@/lib/dates";
-import { createRecordsRepository } from "../repositories/records-repository.ts";
 import { createRunRecord } from "../services/records-service.ts";
 import { parseRunRecordFormValues } from "../services/run-record-input.ts";
 import {
@@ -27,7 +27,7 @@ export async function saveRunRecordAction(
   _previousState: RunRecordFormState,
   formData: FormData,
 ): Promise<RunRecordFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const { localDate, ...values } = formDataToValues(formData);
   const parsed = parseRunRecordFormValues(values);
@@ -39,7 +39,7 @@ export async function saveRunRecordAction(
     };
   }
 
-  const saved = createRunRecord(createRecordsRepository(), {
+  const saved = createRunRecord(createRecordsRepositoryForAuth(auth), {
     ...parsed.data,
     localDate,
     nowIso: new Date().toISOString(),

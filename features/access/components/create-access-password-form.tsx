@@ -15,8 +15,28 @@ export function CreateAccessPasswordForm({ fieldErrors = {} }: CreateAccessPassw
       ) : null}
 
       <div className="grid gap-2">
+        <label htmlFor="username" className="text-sm font-semibold text-[var(--ink-primary)]">
+          管理员用户名
+        </label>
+        <input
+          id="username"
+          name="username"
+          type="text"
+          autoComplete="username"
+          defaultValue="admin"
+          aria-describedby={fieldErrors.username ? "username-error" : undefined}
+          className="min-h-11 rounded-md border border-[var(--border-soft)] bg-white px-3 text-sm text-[var(--ink-primary)]"
+        />
+        {fieldErrors.username ? (
+          <p id="username-error" className="text-sm text-[var(--danger)]">
+            {fieldErrors.username}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-2">
         <label htmlFor="password" className="text-sm font-semibold text-[var(--ink-primary)]">
-          访问密码
+          管理员密码
         </label>
         <input
           id="password"
@@ -35,7 +55,7 @@ export function CreateAccessPasswordForm({ fieldErrors = {} }: CreateAccessPassw
 
       <div className="grid gap-2">
         <label htmlFor="confirmPassword" className="text-sm font-semibold text-[var(--ink-primary)]">
-          确认访问密码
+          确认管理员密码
         </label>
         <input
           id="confirmPassword"
@@ -52,9 +72,7 @@ export function CreateAccessPasswordForm({ fieldErrors = {} }: CreateAccessPassw
         ) : null}
       </div>
 
-      <Button type="submit">
-        创建访问密码
-      </Button>
+      <Button type="submit">创建管理员账号</Button>
     </form>
   );
 }

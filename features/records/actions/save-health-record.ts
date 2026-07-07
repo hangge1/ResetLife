@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { getTodayLocalDate } from "@/lib/dates";
-import { createRecordsRepository } from "../repositories/records-repository.ts";
 import { saveHealthRecord } from "../services/records-service.ts";
 import { parseHealthRecordFormValues } from "../services/health-record-input.ts";
 import { healthRecordToFormValues, type HealthRecordFormState } from "./health-record-form-state";
@@ -22,7 +22,7 @@ export async function saveHealthRecordAction(
   _previousState: HealthRecordFormState,
   formData: FormData,
 ): Promise<HealthRecordFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const { localDate, ...values } = formDataToValues(formData);
   const parsed = parseHealthRecordFormValues(values);
@@ -34,7 +34,7 @@ export async function saveHealthRecordAction(
     };
   }
 
-  const saved = saveHealthRecord(createRecordsRepository(), {
+  const saved = saveHealthRecord(createRecordsRepositoryForAuth(auth), {
     ...parsed.data,
     localDate,
     nowIso: new Date().toISOString(),

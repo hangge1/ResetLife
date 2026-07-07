@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getDb, type AppDb } from "../../../db/client.ts";
 import {
   healthRecords,
@@ -7,6 +7,7 @@ import {
   type RunRecord,
   runRecords,
 } from "../../../db/schema.ts";
+import { DEFAULT_ADMIN_USER_ID } from "../../access/services/auth-context.ts";
 
 type RepositoryErrorCode = "database_error";
 
@@ -67,14 +68,14 @@ function fail(): RecordsRepositoryResult<never> {
   return { ok: false, error: { code: "database_error", message: "记录数据操作失败" } };
 }
 
-export function createRecordsRepository(appDb: AppDb = getDb()) {
+export function createRecordsRepository(appDb: AppDb = getDb(), userId = DEFAULT_ADMIN_USER_ID) {
   return {
     upsertHealthRecord(input: UpsertHealthRecordInput): RecordsRepositoryResult<HealthRecord> {
       try {
         const existing = appDb
           .select()
           .from(healthRecords)
-          .where(eq(healthRecords.localDate, input.localDate))
+          .where(and(eq(healthRecords.userId, userId), eq(healthRecords.localDate, input.localDate)))
           .get();
 
         if (existing) {
@@ -98,6 +99,7 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
           .insert(healthRecords)
           .values({
             id,
+            userId,
             localDate: input.localDate,
             weightKg: input.weightKg ?? null,
             waistCm: input.waistCm ?? null,
@@ -116,7 +118,13 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
 
     getHealthRecordByDate(localDate: string): RecordsRepositoryResult<HealthRecord | null> {
       try {
-        return ok(appDb.select().from(healthRecords).where(eq(healthRecords.localDate, localDate)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(healthRecords)
+            .where(and(eq(healthRecords.userId, userId), eq(healthRecords.localDate, localDate)))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }
@@ -128,6 +136,7 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
           appDb
             .select()
             .from(healthRecords)
+            .where(eq(healthRecords.userId, userId))
             .orderBy(desc(healthRecords.localDate), desc(healthRecords.createdAtIso))
             .all(),
         );
@@ -148,10 +157,16 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
             ...(input.bodyFatPercentage === undefined ? {} : { bodyFatPercentage: input.bodyFatPercentage }),
             updatedAtIso: input.updatedAtIso,
           })
-          .where(eq(healthRecords.id, id))
+          .where(and(eq(healthRecords.userId, userId), eq(healthRecords.id, id)))
           .run();
 
-        return ok(appDb.select().from(healthRecords).where(eq(healthRecords.id, id)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(healthRecords)
+            .where(and(eq(healthRecords.userId, userId), eq(healthRecords.id, id)))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }
@@ -159,8 +174,13 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
 
     deleteHealthRecord(id: string): RecordsRepositoryResult<HealthRecord | null> {
       try {
-        const existing = appDb.select().from(healthRecords).where(eq(healthRecords.id, id)).get() ?? null;
-        appDb.delete(healthRecords).where(eq(healthRecords.id, id)).run();
+        const existing =
+          appDb
+            .select()
+            .from(healthRecords)
+            .where(and(eq(healthRecords.userId, userId), eq(healthRecords.id, id)))
+            .get() ?? null;
+        appDb.delete(healthRecords).where(and(eq(healthRecords.userId, userId), eq(healthRecords.id, id))).run();
         return ok(existing);
       } catch {
         return fail();
@@ -174,6 +194,7 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
           .insert(runRecords)
           .values({
             id,
+            userId,
             localDate: input.localDate,
             distanceKm: input.distanceKm,
             durationSeconds: input.durationSeconds ?? null,
@@ -194,7 +215,13 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
 
     getRunRecordById(id: string): RecordsRepositoryResult<RunRecord | null> {
       try {
-        return ok(appDb.select().from(runRecords).where(eq(runRecords.id, id)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(runRecords)
+            .where(and(eq(runRecords.userId, userId), eq(runRecords.id, id)))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }
@@ -206,7 +233,7 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
           appDb
             .select()
             .from(runRecords)
-            .where(eq(runRecords.localDate, localDate))
+            .where(and(eq(runRecords.userId, userId), eq(runRecords.localDate, localDate)))
             .orderBy(desc(runRecords.localDate), desc(runRecords.createdAtIso))
             .all(),
         );
@@ -221,6 +248,7 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
           appDb
             .select()
             .from(runRecords)
+            .where(eq(runRecords.userId, userId))
             .orderBy(desc(runRecords.localDate), desc(runRecords.createdAtIso))
             .all(),
         );
@@ -243,10 +271,16 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
             ...(input.cadenceSpm === undefined ? {} : { cadenceSpm: input.cadenceSpm }),
             updatedAtIso: input.updatedAtIso,
           })
-          .where(eq(runRecords.id, id))
+          .where(and(eq(runRecords.userId, userId), eq(runRecords.id, id)))
           .run();
 
-        return ok(appDb.select().from(runRecords).where(eq(runRecords.id, id)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(runRecords)
+            .where(and(eq(runRecords.userId, userId), eq(runRecords.id, id)))
+            .get() ?? null,
+        );
       } catch {
         return fail();
       }
@@ -254,8 +288,13 @@ export function createRecordsRepository(appDb: AppDb = getDb()) {
 
     deleteRunRecord(id: string): RecordsRepositoryResult<RunRecord | null> {
       try {
-        const existing = appDb.select().from(runRecords).where(eq(runRecords.id, id)).get() ?? null;
-        appDb.delete(runRecords).where(eq(runRecords.id, id)).run();
+        const existing =
+          appDb
+            .select()
+            .from(runRecords)
+            .where(and(eq(runRecords.userId, userId), eq(runRecords.id, id)))
+            .get() ?? null;
+        appDb.delete(runRecords).where(and(eq(runRecords.userId, userId), eq(runRecords.id, id))).run();
         return ok(existing);
       } catch {
         return fail();

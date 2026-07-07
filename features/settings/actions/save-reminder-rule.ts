@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { parseReminderRuleFormValues } from "../services/reminder-rule-input.ts";
 import { saveReminderRuleSettings } from "../services/reminder-rule-settings-service.ts";
 import { reminderRuleToFormValues, type ReminderRuleFormState } from "./reminder-rule-form-state";
@@ -19,7 +19,7 @@ export async function saveReminderRuleAction(
   _previousState: ReminderRuleFormState,
   formData: FormData,
 ): Promise<ReminderRuleFormState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
   const values = formDataToValues(formData);
   const parsed = parseReminderRuleFormValues(values);
@@ -31,7 +31,7 @@ export async function saveReminderRuleAction(
     };
   }
 
-  const saved = saveReminderRuleSettings(createSettingsRepository(), {
+  const saved = saveReminderRuleSettings(createSettingsRepositoryForAuth(auth), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

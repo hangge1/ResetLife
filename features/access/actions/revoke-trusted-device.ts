@@ -6,13 +6,13 @@ import { createAccessRepository } from "../repositories/access-repository.ts";
 import { shouldUseSecureDeviceCookie } from "../services/cookie-security.ts";
 import { hashDeviceToken, DEVICE_TOKEN_COOKIE } from "../services/device-token.ts";
 import { revokeTrustedDevice } from "../services/access-management-service.ts";
-import { requireTrustedDevice } from "../services/route-guards";
+import { requireUserAuthContext } from "../services/route-guards";
 
 export async function revokeTrustedDeviceAction(formData: FormData) {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
   const id = String(formData.get("deviceId") ?? "");
-  const repository = createAccessRepository();
+  const repository = createAccessRepository(undefined, auth.userId);
   const cookieStore = await cookies();
   const headerStore = await headers();
   const currentDeviceToken = cookieStore.get(DEVICE_TOKEN_COOKIE)?.value ?? "";

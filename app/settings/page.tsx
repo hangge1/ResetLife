@@ -1,14 +1,17 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import {
+  createGlobalSettingsRepository,
+  createReminderRepositoryForAuth,
+  createSettingsRepositoryForAuth,
+} from "@/features/access/services/scoped-repositories";
 import { AccessProtectionPanel } from "@/features/access/components/access-protection-panel";
 import { createAccessRepository } from "@/features/access/repositories/access-repository";
 import { listTrustedDevices } from "@/features/access/services/access-management-service";
-import { createReminderRepository } from "@/features/reminders/repositories/reminder-repository";
 import { ProfileForm } from "@/features/settings/components/profile-form";
 import { ReminderRuleForm } from "@/features/settings/components/reminder-rule-form";
 import { SmtpConfigForm } from "@/features/settings/components/smtp-config-form";
 import { TrendThresholdForm } from "@/features/settings/components/trend-threshold-form";
-import { createSettingsRepository } from "@/features/settings/repositories/settings-repository";
 import { getProfileSettings } from "@/features/settings/services/profile-settings-service";
 import { getReminderRuleSettings } from "@/features/settings/services/reminder-rule-settings-service";
 import { getSmtpConfig } from "@/features/settings/services/smtp-config-service";
@@ -49,20 +52,22 @@ const settingGroups = [
 ];
 
 export default async function SettingsPage() {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
-  const repository = createSettingsRepository();
-  const accessRepository = createAccessRepository();
-  const reminderRepository = createReminderRepository();
+  const repository = createSettingsRepositoryForAuth(auth);
+  const globalSettingsRepository = createGlobalSettingsRepository();
+  const accessRepository = createAccessRepository(undefined, auth.userId);
+  const reminderRepository = createReminderRepositoryForAuth(auth);
+  const isAdmin = auth.role === "admin";
   const profile = getProfileSettings(repository);
   const reminderRules = getReminderRuleSettings(repository);
-  const smtpConfig = getSmtpConfig(repository);
+  const smtpConfig = isAdmin ? getSmtpConfig(globalSettingsRepository) : null;
   const latestEmailReminder = reminderRepository.getLatestEmailReminderEvent();
   const trustedDevices = listTrustedDevices(accessRepository);
   const trendThresholds = getTrendThresholdSettings(repository);
   const profileError = !profile.ok ? (profile.fieldErrors.form ?? "个人资料读取失败") : "";
   const reminderRuleError = !reminderRules.ok ? (reminderRules.fieldErrors.form ?? "提醒规则读取失败") : "";
-  const smtpConfigError = !smtpConfig.ok ? (smtpConfig.fieldErrors.form ?? "SMTP 配置读取失败") : "";
+  const smtpConfigError = smtpConfig && !smtpConfig.ok ? (smtpConfig.fieldErrors.form ?? "SMTP 配置读取失败") : "";
   const trendThresholdError = !trendThresholds.ok ? (trendThresholds.fieldErrors.form ?? "趋势估算配置读取失败") : "";
   const initialProfileState = {
     values: profileToFormValues(profile.ok ? profile.data : null),
@@ -83,8 +88,8 @@ export default async function SettingsPage() {
     fieldErrors: reminderRules.ok ? {} : { form: reminderRuleError },
   };
   const initialSmtpConfigState = {
-    values: smtpConfigToFormValues(smtpConfig.ok ? smtpConfig.data : null),
-    fieldErrors: smtpConfig.ok ? {} : { form: smtpConfigError },
+    values: smtpConfigToFormValues(smtpConfig?.ok ? smtpConfig.data : null),
+    fieldErrors: smtpConfig?.ok === false ? { form: smtpConfigError } : {},
   };
   const emailReminderStatus =
     latestEmailReminder.ok && latestEmailReminder.data
@@ -104,7 +109,9 @@ export default async function SettingsPage() {
         </section>
 
         <section aria-label="配置分组" className="workbench-grid workbench-grid--two">
-          {settingGroups.map((group) => (
+          {settingGroups
+            .filter((group) => isAdmin || group.title !== "SMTP 邮件")
+            .map((group) => (
             <article className="workbench-card" key={group.title}>
               <div className="mb-3">
                 <h2 className="workbench-card-title">{group.title}</h2>
@@ -118,7 +125,7 @@ export default async function SettingsPage() {
                 <div className="grid gap-4">
                   <SmtpConfigForm
                     initialState={initialSmtpConfigState}
-                    passwordConfigured={smtpConfig.ok ? smtpConfig.data.passwordConfigured : false}
+                    passwordConfigured={smtpConfig?.ok ? smtpConfig.data.passwordConfigured : false}
                   />
                   <div className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] px-3 py-3">
                     <p className="m-0 text-sm font-semibold text-[var(--ink-primary)]">最近邮件提醒状态</p>

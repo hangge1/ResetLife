@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { deleteRecordAction } from "@/features/records/actions/delete-record";
-import { createRecordsRepository } from "@/features/records/repositories/records-repository";
 import {
   listHistoryRecords,
   type HistoryRange,
@@ -31,7 +31,7 @@ function parseRange(value: string | undefined): HistoryRange {
 }
 
 export default async function HistoryPage({ searchParams }: HistoryPageProps) {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const params = (await searchParams) ?? {};
   const type = parseType(getStringParam(params, "type"));
@@ -41,7 +41,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const deleteError = getStringParam(params, "deleteError");
   const deleted = getStringParam(params, "deleted");
   const defaultBackfillDate = endDate || startDate || getTodayLocalDate();
-  const history = listHistoryRecords(createRecordsRepository(), {
+  const history = listHistoryRecords(createRecordsRepositoryForAuth(auth), {
     type,
     range,
     startDate,
@@ -53,6 +53,11 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   return (
     <AppShell>
       <main className="workbench-main">
+        {auth.mode === "guest" ? (
+          <p className="m-0 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--ink-secondary)]">
+            访客模式：历史记录来自临时会话，不会写入数据库。
+          </p>
+        ) : null}
         <section className="workbench-hero">
           <p className="workbench-eyebrow">记录卡片流</p>
           <h1 className="workbench-title">历史记录</h1>

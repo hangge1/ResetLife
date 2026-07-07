@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { parseTrendThresholdFormValues } from "../services/trend-threshold-input.ts";
 import { saveTrendThresholdSettings } from "../services/trend-threshold-settings-service.ts";
 import { trendThresholdToFormValues, type TrendThresholdFormState } from "./trend-threshold-form-state";
@@ -18,7 +18,7 @@ export async function saveTrendThresholdAction(
   _previousState: TrendThresholdFormState,
   formData: FormData,
 ): Promise<TrendThresholdFormState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
   const values = formDataToValues(formData);
   const parsed = parseTrendThresholdFormValues(values);
@@ -30,7 +30,7 @@ export async function saveTrendThresholdAction(
     };
   }
 
-  const saved = saveTrendThresholdSettings(createSettingsRepository(), {
+  const saved = saveTrendThresholdSettings(createSettingsRepositoryForAuth(auth), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

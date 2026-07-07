@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { getDb, type AppDb } from "../../../db/client.ts";
 import { settings, type Setting } from "../../../db/schema.ts";
+import { DEFAULT_ADMIN_USER_ID } from "../../access/services/auth-context.ts";
 
 export type SettingType = "profile" | "reminder" | "smtp" | "trend" | "access";
 
@@ -29,15 +30,15 @@ function fail(): SettingsRepositoryResult<never> {
   return { ok: false, error: { code: "database_error", message: "设置数据操作失败" } };
 }
 
-function settingWhere(type: SettingType, key: string) {
-  return and(eq(settings.type, type), eq(settings.key, key));
+function settingWhere(userId: string, type: SettingType, key: string) {
+  return and(eq(settings.userId, userId), eq(settings.type, type), eq(settings.key, key));
 }
 
-export function createSettingsRepository(appDb: AppDb = getDb()) {
+export function createSettingsRepository(appDb: AppDb = getDb(), userId = DEFAULT_ADMIN_USER_ID) {
   return {
     getSetting(type: SettingType, key: string): SettingsRepositoryResult<Setting | null> {
       try {
-        return ok(appDb.select().from(settings).where(settingWhere(type, key)).get() ?? null);
+        return ok(appDb.select().from(settings).where(settingWhere(userId, type, key)).get() ?? null);
       } catch {
         return fail();
       }
@@ -45,7 +46,7 @@ export function createSettingsRepository(appDb: AppDb = getDb()) {
 
     listSettingsByType(type: SettingType): SettingsRepositoryResult<Setting[]> {
       try {
-        return ok(appDb.select().from(settings).where(eq(settings.type, type)).all());
+        return ok(appDb.select().from(settings).where(and(eq(settings.userId, userId), eq(settings.type, type))).all());
       } catch {
         return fail();
       }
@@ -53,7 +54,7 @@ export function createSettingsRepository(appDb: AppDb = getDb()) {
 
     saveSetting(input: SaveSettingInput): SettingsRepositoryResult<Setting> {
       try {
-        const existing = appDb.select().from(settings).where(settingWhere(input.type, input.key)).get();
+        const existing = appDb.select().from(settings).where(settingWhere(userId, input.type, input.key)).get();
 
         if (existing) {
           appDb
@@ -73,6 +74,7 @@ export function createSettingsRepository(appDb: AppDb = getDb()) {
           .insert(settings)
           .values({
             id,
+            userId,
             type: input.type,
             key: input.key,
             valueJson: input.valueJson,

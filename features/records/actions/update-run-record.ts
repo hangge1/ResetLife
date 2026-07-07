@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "../repositories/records-repository.ts";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { updateRunRecord } from "../services/records-service.ts";
 import { parseRunRecordEditValues } from "../services/run-record-input.ts";
 import { runRecordToEditValues, type RunRecordEditFormState } from "./run-record-edit-state";
@@ -23,7 +23,7 @@ export async function updateRunRecordAction(
   _previousState: RunRecordEditFormState,
   formData: FormData,
 ): Promise<RunRecordEditFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const id = String(formData.get("id") ?? "");
   const values = formDataToValues(formData);
@@ -33,7 +33,7 @@ export async function updateRunRecordAction(
     return { values: parsed.values, fieldErrors: parsed.fieldErrors };
   }
 
-  const updated = updateRunRecord(createRecordsRepository(), id, {
+  const updated = updateRunRecord(createRecordsRepositoryForAuth(auth), id, {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

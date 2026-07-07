@@ -1,5 +1,5 @@
 import type { Goal } from "@/db/schema";
-import { createGoalsRepository } from "@/features/goals/repositories/goals-repository";
+import type { createGoalsRepository } from "@/features/goals/repositories/goals-repository";
 import { getHealthGoal, getRunGoal } from "@/features/goals/services/goals-service";
 import { healthGoalToFormValues } from "@/features/goals/actions/health-goal-form-state";
 import { runGoalToFormValues } from "@/features/goals/actions/run-goal-form-state";
@@ -74,8 +74,9 @@ function RunGoalSummary({ goal }: { goal: Goal | null }) {
   );
 }
 
-export function GoalSettingsSection() {
-  const repository = createGoalsRepository();
+type GoalsRepository = ReturnType<typeof createGoalsRepository>;
+
+export function GoalSettingsSection({ repository }: { repository: GoalsRepository }) {
   const healthGoal = getHealthGoal(repository);
   const runGoal = getRunGoal(repository);
   const healthGoalError =

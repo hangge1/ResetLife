@@ -6,10 +6,12 @@ import {
   createDashboardSummary,
   type DashboardProgressCard,
 } from "@/features/dashboard/services/dashboard-summary";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "@/features/records/repositories/records-repository";
-import { createGoalsRepository } from "@/features/goals/repositories/goals-repository";
-import { createSettingsRepository } from "@/features/settings/repositories/settings-repository";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import {
+  createGoalsRepositoryForAuth,
+  createRecordsRepositoryForAuth,
+  createSettingsRepositoryForAuth,
+} from "@/features/access/services/scoped-repositories";
 import { getProfileSettings } from "@/features/settings/services/profile-settings-service";
 import { getReminderRuleSettings } from "@/features/settings/services/reminder-rule-settings-service";
 import { getTrendThresholdSettings } from "@/features/settings/services/trend-threshold-settings-service";
@@ -35,17 +37,17 @@ function GoalProgressBar({ card }: { card: DashboardProgressCard }) {
 }
 
 export default async function DataPage() {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
-  const settingsRepository = createSettingsRepository();
+  const settingsRepository = createSettingsRepositoryForAuth(auth);
   const profile = getProfileSettings(settingsRepository);
   const trendThresholds = getTrendThresholdSettings(settingsRepository);
   const reminderRules = getReminderRuleSettings(settingsRepository);
   const reminderStatus =
     reminderRules.ok && (reminderRules.data.inAppEnabled || reminderRules.data.emailEnabled) ? "已开启提醒" : "未开启提醒";
   const summary = createDashboardSummary({
-    recordsRepository: createRecordsRepository(),
-    goalsRepository: createGoalsRepository(),
+    recordsRepository: createRecordsRepositoryForAuth(auth),
+    goalsRepository: createGoalsRepositoryForAuth(auth),
     todayLocalDate: getTodayLocalDate(),
     includeAnalytics: true,
     heightCm: profile.ok ? profile.data.heightCm : null,
@@ -56,6 +58,11 @@ export default async function DataPage() {
   return (
     <AppShell>
       <main className="workbench-main">
+        {auth.mode === "guest" ? (
+          <p className="m-0 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--ink-secondary)]">
+            访客模式：数据看板使用临时示例和本次会话数据。
+          </p>
+        ) : null}
         <section className="workbench-hero">
           <p className="workbench-eyebrow">数据看板</p>
           <h1 className="workbench-title">看目标进度和长期变化</h1>

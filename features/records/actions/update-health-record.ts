@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "../repositories/records-repository.ts";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { updateHealthRecord } from "../services/records-service.ts";
 import { parseHealthRecordEditValues } from "../services/health-record-input.ts";
 import { healthRecordToEditValues, type HealthRecordEditFormState } from "./health-record-edit-state";
@@ -21,7 +21,7 @@ export async function updateHealthRecordAction(
   _previousState: HealthRecordEditFormState,
   formData: FormData,
 ): Promise<HealthRecordEditFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const id = String(formData.get("id") ?? "");
   const values = formDataToValues(formData);
@@ -31,7 +31,7 @@ export async function updateHealthRecordAction(
     return { values: parsed.values, fieldErrors: parsed.fieldErrors };
   }
 
-  const updated = updateHealthRecord(createRecordsRepository(), id, {
+  const updated = updateHealthRecord(createRecordsRepositoryForAuth(auth), id, {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

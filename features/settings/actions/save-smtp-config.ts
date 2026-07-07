@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createGlobalSettingsRepository } from "@/features/access/services/scoped-repositories";
 import { parseSmtpConfigFormValues } from "../services/smtp-config-input.ts";
 import { saveSmtpConfig } from "../services/smtp-config-service.ts";
 import { smtpConfigToFormValues, type SmtpConfigFormState } from "./smtp-config-form-state";
@@ -22,7 +22,14 @@ export async function saveSmtpConfigAction(
   _previousState: SmtpConfigFormState,
   formData: FormData,
 ): Promise<SmtpConfigFormState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
+
+  if (auth.role !== "admin") {
+    return {
+      values: formDataToValues(formData),
+      fieldErrors: { form: "只有管理员可以维护 SMTP 发信配置" },
+    };
+  }
 
   const values = formDataToValues(formData);
   const parsed = parseSmtpConfigFormValues(values);
@@ -34,7 +41,7 @@ export async function saveSmtpConfigAction(
     };
   }
 
-  const saved = saveSmtpConfig(createSettingsRepository(), {
+  const saved = saveSmtpConfig(createGlobalSettingsRepository(), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

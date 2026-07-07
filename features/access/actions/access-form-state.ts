@@ -1,5 +1,6 @@
 export type CreateAccessPasswordState = {
   fieldErrors: {
+    username?: string;
     password?: string;
     confirmPassword?: string;
     form?: string;
@@ -8,6 +9,7 @@ export type CreateAccessPasswordState = {
 
 export type VerifyAccessPasswordState = {
   fieldErrors: {
+    username?: string;
     password?: string;
     form?: string;
   };

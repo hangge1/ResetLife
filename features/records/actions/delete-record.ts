@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "../repositories/records-repository.ts";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { deleteHealthRecord, deleteRunRecord } from "../services/records-service.ts";
 
 export async function deleteRecordAction(formData: FormData) {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const kind = String(formData.get("kind") ?? "");
   const id = String(formData.get("id") ?? "");
@@ -17,7 +17,7 @@ export async function deleteRecordAction(formData: FormData) {
     redirect("/history?deleteError=confirm");
   }
 
-  const repository = createRecordsRepository();
+  const repository = createRecordsRepositoryForAuth(auth);
   const deleted =
     kind === "health"
       ? deleteHealthRecord(repository, id)

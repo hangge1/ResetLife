@@ -7,6 +7,7 @@ import {
   trustedDevices,
   type TrustedDevice,
 } from "../../../db/schema.ts";
+import { DEFAULT_ADMIN_USER_ID } from "../services/auth-context.ts";
 
 type RepositoryErrorCode = "duplicate_device" | "database_error";
 const ACCESS_SECRET_ID = "current";
@@ -27,6 +28,7 @@ type SaveAccessSecretInput = {
 };
 
 type CreateTrustedDeviceInput = {
+  userId?: string;
   deviceIdentifierHash: string;
   displayName?: string | null;
   userAgent?: string | null;
@@ -57,7 +59,7 @@ function mapRepositoryError(error: unknown): RepositoryError {
   return { code: "database_error", message: "数据库操作失败" };
 }
 
-export function createAccessRepository(appDb: AppDb = getDb()) {
+export function createAccessRepository(appDb: AppDb = getDb(), userId = DEFAULT_ADMIN_USER_ID) {
   return {
     getAccessSecret(): RepositoryResult<AccessSecret | null> {
       try {
@@ -125,6 +127,7 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
             .insert(trustedDevices)
             .values({
               id,
+              userId: input.userId ?? userId,
               deviceIdentifierHash: input.deviceIdentifierHash,
               displayName: input.displayName ?? null,
               userAgent: input.userAgent ?? null,
@@ -151,6 +154,7 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
           .where(
             and(
               eq(trustedDevices.deviceIdentifierHash, input.deviceIdentifierHash),
+              eq(trustedDevices.userId, input.userId ?? userId),
               isNull(trustedDevices.revokedAtIso),
             ),
           )
@@ -163,7 +167,12 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
         const existingRevokedDevice = appDb
           .select()
           .from(trustedDevices)
-          .where(eq(trustedDevices.deviceIdentifierHash, input.deviceIdentifierHash))
+          .where(
+            and(
+              eq(trustedDevices.userId, input.userId ?? userId),
+              eq(trustedDevices.deviceIdentifierHash, input.deviceIdentifierHash),
+            ),
+          )
           .get();
 
         if (existingRevokedDevice) {
@@ -188,6 +197,7 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
           .insert(trustedDevices)
           .values({
             id,
+            userId: input.userId ?? userId,
             deviceIdentifierHash: input.deviceIdentifierHash,
             displayName: input.displayName ?? null,
             userAgent: input.userAgent ?? null,
@@ -210,7 +220,11 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
             .select()
             .from(trustedDevices)
             .where(
-              and(eq(trustedDevices.deviceIdentifierHash, deviceIdentifierHash), isNull(trustedDevices.revokedAtIso)),
+              and(
+                eq(trustedDevices.userId, userId),
+                eq(trustedDevices.deviceIdentifierHash, deviceIdentifierHash),
+                isNull(trustedDevices.revokedAtIso),
+              ),
             )
             .get() ?? null,
         );
@@ -224,14 +238,14 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
         appDb
           .update(trustedDevices)
           .set({ lastSeenAtIso })
-          .where(and(eq(trustedDevices.id, id), isNull(trustedDevices.revokedAtIso)))
+          .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.id, id), isNull(trustedDevices.revokedAtIso)))
           .run();
 
         return ok(
           appDb
             .select()
             .from(trustedDevices)
-            .where(and(eq(trustedDevices.id, id), isNull(trustedDevices.revokedAtIso)))
+            .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.id, id), isNull(trustedDevices.revokedAtIso)))
             .get() ?? null,
         );
       } catch (error) {
@@ -245,7 +259,7 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
           appDb
             .select()
             .from(trustedDevices)
-            .where(isNull(trustedDevices.revokedAtIso))
+            .where(and(eq(trustedDevices.userId, userId), isNull(trustedDevices.revokedAtIso)))
             .orderBy(desc(trustedDevices.lastSeenAtIso))
             .all(),
         );
@@ -259,10 +273,16 @@ export function createAccessRepository(appDb: AppDb = getDb()) {
         appDb
           .update(trustedDevices)
           .set({ revokedAtIso })
-          .where(eq(trustedDevices.id, id))
+          .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.id, id)))
           .run();
 
-        return ok(appDb.select().from(trustedDevices).where(eq(trustedDevices.id, id)).get() ?? null);
+        return ok(
+          appDb
+            .select()
+            .from(trustedDevices)
+            .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.id, id)))
+            .get() ?? null,
+        );
       } catch (error) {
         return fail(mapRepositoryError(error));
       }

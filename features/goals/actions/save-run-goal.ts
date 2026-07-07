@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createGoalsRepository } from "../repositories/goals-repository.ts";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createGoalsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { saveRunGoal } from "../services/goals-service.ts";
 import { parseRunGoalFormValues } from "../services/run-goal-input.ts";
 import { runGoalToFormValues, type RunGoalFormState } from "./run-goal-form-state";
@@ -18,7 +18,7 @@ export async function saveRunGoalAction(
   _previousState: RunGoalFormState,
   formData: FormData,
 ): Promise<RunGoalFormState> {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const values = formDataToValues(formData);
   const parsed = parseRunGoalFormValues(values);
@@ -30,7 +30,7 @@ export async function saveRunGoalAction(
     };
   }
 
-  const saved = saveRunGoal(createGoalsRepository(), {
+  const saved = saveRunGoal(createGoalsRepositoryForAuth(auth), {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });

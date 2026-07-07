@@ -14,6 +14,7 @@ type ReminderRunnerInput = {
   recordsRepository: RecordsRepository;
   reminderRepository: ReminderRepository;
   settingsRepository: SettingsRepository;
+  smtpSettingsRepository?: SettingsRepository;
   localDate: string;
   currentTime: string;
   nowIso: string;
@@ -103,7 +104,7 @@ export async function runReminderCheck(input: ReminderRunnerInput) {
 
     if (!existingEmailEvent.data) {
       const profile = getProfileSettings(input.settingsRepository);
-      const smtp = getSmtpConfigWithSecret(input.settingsRepository);
+      const smtp = getSmtpConfigWithSecret(input.smtpSettingsRepository ?? input.settingsRepository);
 
       if (!profile.ok || !smtp.ok || !profile.data.reminderEmail || !smtp.data?.host || !smtp.data.fromEmail) {
         input.reminderRepository.createReminderEvent({

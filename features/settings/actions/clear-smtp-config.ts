@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createGlobalSettingsRepository } from "@/features/access/services/scoped-repositories";
 import { clearSmtpConfig } from "../services/smtp-config-service.ts";
 
 export async function clearSmtpConfigAction() {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
-  clearSmtpConfig(createSettingsRepository(), new Date().toISOString());
+  if (auth.role !== "admin") {
+    return;
+  }
+
+  clearSmtpConfig(createGlobalSettingsRepository(), new Date().toISOString());
   revalidatePath("/settings");
 }

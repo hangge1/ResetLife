@@ -4,9 +4,11 @@ import { Activity, CalendarCheck, Flag, Ruler, Route, Scale } from "lucide-react
 import { AppShell } from "@/components/layout/app-shell";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
 import { createDashboardSummary, type DashboardFocusMetric } from "@/features/dashboard/services/dashboard-summary";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "@/features/records/repositories/records-repository";
-import { createGoalsRepository } from "@/features/goals/repositories/goals-repository";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import {
+  createGoalsRepositoryForAuth,
+  createRecordsRepositoryForAuth,
+} from "@/features/access/services/scoped-repositories";
 import { getTodayLocalDate } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
@@ -80,11 +82,11 @@ function MetricContent({ metric, fallback }: { metric?: DashboardFocusMetric; fa
 }
 
 export default async function Home() {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const todayLocalDate = getTodayLocalDate();
-  const recordsRepository = createRecordsRepository();
-  const goalsRepository = createGoalsRepository();
+  const recordsRepository = createRecordsRepositoryForAuth(auth);
+  const goalsRepository = createGoalsRepositoryForAuth(auth);
   const summary = createDashboardSummary({
     recordsRepository,
     goalsRepository,
@@ -103,6 +105,11 @@ export default async function Home() {
     <AppShell>
       <main className="home-main">
         <OnboardingGuide />
+        {auth.mode === "guest" ? (
+          <section className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 py-3 text-sm font-semibold text-[var(--ink-secondary)]">
+            当前为访客模式，数据只保存在本次临时会话中，过期或服务重启后不会保留。
+          </section>
+        ) : null}
         <section className="home-grid" aria-label="跑步瘦身首页入口">
           <HomeCard
             action="设目标"

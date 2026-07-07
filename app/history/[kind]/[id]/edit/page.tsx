@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "@/features/records/repositories/records-repository";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { HealthRecordEditForm } from "@/features/records/components/health-record-edit-form";
 import { RunRecordEditForm } from "@/features/records/components/run-record-edit-form";
 import { healthRecordToEditValues } from "@/features/records/actions/health-record-edit-state";
@@ -18,10 +18,10 @@ type EditHistoryRecordPageProps = {
 };
 
 export default async function EditHistoryRecordPage({ params }: EditHistoryRecordPageProps) {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const { kind, id } = await params;
-  const repository = createRecordsRepository();
+  const repository = createRecordsRepositoryForAuth(auth);
 
   if (kind === "health") {
     const record = repository.listHealthRecords();

@@ -1,9 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "../services/route-guards";
-import { createAccessRepository } from "../repositories/access-repository.ts";
-import { changeAccessPassword } from "../services/access-management-service.ts";
+import { createUserRepository } from "../repositories/user-repository.ts";
+import { requireUserAuthContext } from "../services/route-guards";
+import { changeUserPassword } from "../services/user-auth-service.ts";
 
 export type ChangeAccessPasswordState = {
   fieldErrors: {
@@ -19,9 +19,10 @@ export async function changeAccessPasswordAction(
   _previousState: ChangeAccessPasswordState,
   formData: FormData,
 ): Promise<ChangeAccessPasswordState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
 
-  const changed = await changeAccessPassword(createAccessRepository(), {
+  const changed = await changeUserPassword(createUserRepository(), {
+    userId: auth.userId,
     currentPassword: String(formData.get("currentPassword") ?? ""),
     newPassword: String(formData.get("newPassword") ?? ""),
     confirmPassword: String(formData.get("confirmPassword") ?? ""),

@@ -13,10 +13,49 @@ export const accessSecrets = sqliteTable(
   (table) => [check("access_secrets_singleton_id_check", sql`${table.id} = 'current'`)],
 );
 
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    displayName: text("display_name"),
+    role: text("role").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    passwordHashAlgorithm: text("password_hash_algorithm").notNull(),
+    createdAtIso: text("created_at_iso").notNull(),
+    updatedAtIso: text("updated_at_iso").notNull(),
+    disabledAtIso: text("disabled_at_iso"),
+  },
+  (table) => [
+    uniqueIndex("users_username_unique").on(table.username),
+    check("users_role_check", sql`${table.role} in ('admin', 'user')`),
+  ],
+);
+
+export const userSessions = sqliteTable(
+  "user_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    sessionTokenHash: text("session_token_hash").notNull(),
+    createdAtIso: text("created_at_iso").notNull(),
+    lastSeenAtIso: text("last_seen_at_iso").notNull(),
+    expiresAtIso: text("expires_at_iso").notNull(),
+    revokedAtIso: text("revoked_at_iso"),
+  },
+  (table) => [
+    uniqueIndex("user_sessions_active_token_hash_unique")
+      .on(table.sessionTokenHash)
+      .where(sql`${table.revokedAtIso} is null`),
+    index("user_sessions_user_id_idx").on(table.userId),
+  ],
+);
+
 export const trustedDevices = sqliteTable(
   "trusted_devices",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     deviceIdentifierHash: text("device_identifier_hash").notNull(),
     displayName: text("display_name"),
     userAgent: text("user_agent"),
@@ -26,13 +65,17 @@ export const trustedDevices = sqliteTable(
   },
   (table) => [
     uniqueIndex("trusted_devices_active_device_identifier_hash_unique")
-      .on(table.deviceIdentifierHash)
+      .on(table.userId, table.deviceIdentifierHash)
       .where(sql`${table.revokedAtIso} is null`),
   ],
 );
 
 export type AccessSecret = typeof accessSecrets.$inferSelect;
 export type NewAccessSecret = typeof accessSecrets.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type UserSession = typeof userSessions.$inferSelect;
+export type NewUserSession = typeof userSessions.$inferInsert;
 export type TrustedDevice = typeof trustedDevices.$inferSelect;
 export type NewTrustedDevice = typeof trustedDevices.$inferInsert;
 
@@ -40,6 +83,7 @@ export const healthRecords = sqliteTable(
   "health_records",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     localDate: text("local_date").notNull(),
     weightKg: real("weight_kg"),
     waistCm: real("waist_cm"),
@@ -48,13 +92,14 @@ export const healthRecords = sqliteTable(
     createdAtIso: text("created_at_iso").notNull(),
     updatedAtIso: text("updated_at_iso").notNull(),
   },
-  (table) => [uniqueIndex("health_records_local_date_unique").on(table.localDate)],
+  (table) => [uniqueIndex("health_records_user_local_date_unique").on(table.userId, table.localDate)],
 );
 
 export const runRecords = sqliteTable(
   "run_records",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     localDate: text("local_date").notNull(),
     distanceKm: real("distance_km").notNull(),
     durationSeconds: integer("duration_seconds"),
@@ -65,7 +110,7 @@ export const runRecords = sqliteTable(
     createdAtIso: text("created_at_iso").notNull(),
     updatedAtIso: text("updated_at_iso").notNull(),
   },
-  (table) => [index("run_records_local_date_idx").on(table.localDate)],
+  (table) => [index("run_records_user_local_date_idx").on(table.userId, table.localDate)],
 );
 
 export type HealthRecord = typeof healthRecords.$inferSelect;
@@ -77,6 +122,7 @@ export const goals = sqliteTable(
   "goals",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     type: text("type").notNull(),
     targetWeightKg: real("target_weight_kg"),
     targetWaistCm: real("target_waist_cm"),
@@ -88,7 +134,7 @@ export const goals = sqliteTable(
     updatedAtIso: text("updated_at_iso").notNull(),
   },
   (table) => [
-    uniqueIndex("goals_type_unique").on(table.type),
+    uniqueIndex("goals_user_type_unique").on(table.userId, table.type),
     check("goals_type_check", sql`${table.type} in ('health', 'run')`),
   ],
 );
@@ -100,6 +146,7 @@ export const settings = sqliteTable(
   "settings",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     type: text("type").notNull(),
     key: text("key").notNull(),
     valueJson: text("value_json").notNull(),
@@ -107,7 +154,7 @@ export const settings = sqliteTable(
     updatedAtIso: text("updated_at_iso").notNull(),
   },
   (table) => [
-    uniqueIndex("settings_type_key_unique").on(table.type, table.key),
+    uniqueIndex("settings_user_type_key_unique").on(table.userId, table.type, table.key),
     check("settings_type_check", sql`${table.type} in ('profile', 'reminder', 'smtp', 'trend', 'access')`),
   ],
 );
@@ -119,6 +166,7 @@ export const reminderEvents = sqliteTable(
   "reminder_events",
   {
     id: text("id").primaryKey(),
+    userId: text("user_id").notNull().default("default-admin"),
     localDate: text("local_date").notNull(),
     reminderType: text("reminder_type").notNull(),
     channel: text("channel").notNull(),
@@ -128,7 +176,12 @@ export const reminderEvents = sqliteTable(
     updatedAtIso: text("updated_at_iso").notNull(),
   },
   (table) => [
-    uniqueIndex("reminder_events_idempotency_unique").on(table.localDate, table.reminderType, table.channel),
+    uniqueIndex("reminder_events_user_idempotency_unique").on(
+      table.userId,
+      table.localDate,
+      table.reminderType,
+      table.channel,
+    ),
     check("reminder_events_channel_check", sql`${table.channel} in ('in_app', 'email')`),
     check("reminder_events_status_check", sql`${table.status} in ('created', 'sent', 'failed', 'skipped')`),
   ],

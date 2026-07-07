@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/layout/app-shell";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createRecordsRepository } from "@/features/records/repositories/records-repository";
+import { requireAuthContext } from "@/features/access/services/route-guards";
+import { createRecordsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { HealthRecordForm } from "@/features/records/components/health-record-form";
 import { RecordDatePicker } from "@/features/records/components/record-date-picker";
 import { RunRecordForm } from "@/features/records/components/run-record-form";
@@ -25,14 +25,14 @@ function getStringParam(params: Record<string, string | string[] | undefined>, k
 }
 
 export default async function RecordsPage({ searchParams }: RecordsPageProps) {
-  await requireTrustedDevice();
+  const auth = await requireAuthContext();
 
   const params = (await searchParams) ?? {};
   const todayLocalDate = getTodayLocalDate();
   const requestedDate = getStringParam(params, "date") ?? todayLocalDate;
   const dateValidation = validateLocalDate(requestedDate);
   const localDate = dateValidation.ok ? requestedDate : todayLocalDate;
-  const repository = createRecordsRepository();
+  const repository = createRecordsRepositoryForAuth(auth);
   const healthRecord = getHealthRecordByDate(repository, localDate);
   const runRecords = listRunRecordsByDate(repository, localDate);
   const healthRecordError =
@@ -47,6 +47,11 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
   return (
     <AppShell>
       <main className="workbench-main">
+        {auth.mode === "guest" ? (
+          <p className="m-0 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--ink-secondary)]">
+            访客模式：本页提交的数据只保存在临时会话中，不会写入数据库。
+          </p>
+        ) : null}
         <section className="workbench-hero">
           <p className="workbench-eyebrow">打卡工作台</p>
           <h1 className="workbench-title">今天的数据，今天留下证据</h1>

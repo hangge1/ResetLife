@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireTrustedDevice } from "@/features/access/services/route-guards";
-import { createSettingsRepository } from "../repositories/settings-repository.ts";
+import { requireUserAuthContext } from "@/features/access/services/route-guards";
+import { createGlobalSettingsRepository } from "@/features/access/services/scoped-repositories";
 import { sendTestEmail } from "../services/test-email-service.ts";
 import type { TestEmailFormState } from "./send-test-email-state";
 
@@ -14,7 +14,11 @@ export async function sendTestEmailAction(
   _previousState: TestEmailFormState,
   formData: FormData,
 ): Promise<TestEmailFormState> {
-  await requireTrustedDevice();
+  const auth = await requireUserAuthContext();
+
+  if (auth.role !== "admin") {
+    return { fieldErrors: { form: "只有管理员可以测试 SMTP 发信配置" } };
+  }
 
   const recipientEmail = String(formData.get("recipientEmail") ?? "").trim();
 
@@ -22,7 +26,7 @@ export async function sendTestEmailAction(
     return { fieldErrors: { recipientEmail: "收件邮箱格式不正确" } };
   }
 
-  const sent = await sendTestEmail(createSettingsRepository(), {
+  const sent = await sendTestEmail(createGlobalSettingsRepository(), {
     recipientEmail,
     nowIso: new Date().toISOString(),
   });
