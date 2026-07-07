@@ -413,6 +413,40 @@ textarea:hover {
   padding: 30px 24px 22px;
 }
 
+.home-content {
+  width: 100%;
+  align-self: center;
+  display: grid;
+  gap: 14px;
+}
+
+.guest-mode-notice {
+  width: max-content;
+  max-width: 100%;
+  justify-self: start;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  border: 1px solid rgba(47, 109, 179, 0.14);
+  border-radius: 999px;
+  background: rgba(247, 249, 255, 0.72);
+  color: var(--ink-secondary);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.35;
+  box-shadow: 0 10px 24px rgba(4, 30, 66, 0.05);
+}
+
+.guest-mode-notice__icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
 .onboarding-trigger {
   position: absolute;
   top: 14px;
@@ -785,6 +819,16 @@ textarea:hover {
     min-height: calc(100vh - 102px);
     gap: 12px;
     padding: 10px 12px 12px;
+  }
+
+  .home-content {
+    gap: 10px;
+  }
+
+  .guest-mode-notice {
+    width: 100%;
+    border-radius: 8px;
+    padding: 8px 10px;
   }
 
   .home-grid {

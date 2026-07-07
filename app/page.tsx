@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { Activity, CalendarCheck, Flag, Ruler, Route, Scale } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { GuestModeNotice } from "@/components/layout/guest-mode-notice";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
 import { createDashboardSummary, type DashboardFocusMetric } from "@/features/dashboard/services/dashboard-summary";
 import { requireAuthContext } from "@/features/access/services/route-guards";
@@ -105,99 +106,101 @@ export default async function Home() {
     <AppShell>
       <main className="home-main">
         <OnboardingGuide />
-        {auth.mode === "guest" ? (
-          <section className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 py-3 text-sm font-semibold text-[var(--ink-secondary)]">
-            当前为访客模式，数据只保存在本次临时会话中，过期或服务重启后不会保留。
-          </section>
-        ) : null}
-        <section className="home-grid" aria-label="跑步瘦身首页入口">
-          <HomeCard
-            action="设目标"
-            href="/goals"
-            icon={<Scale aria-hidden="true" className="size-5" />}
-            label="目标体重"
-            tone="weight"
-            tourId="goal-weight"
-          >
-            <MetricContent fallback="设置目标体重后显示差距" metric={weightMetric} />
-          </HomeCard>
+        <div className="home-content">
+          {auth.mode === "guest" ? (
+            <GuestModeNotice>
+              访客模式，数据仅在本次会话保留。
+            </GuestModeNotice>
+          ) : null}
+          <section className="home-grid" aria-label="跑步瘦身首页入口">
+            <HomeCard
+              action="设目标"
+              href="/goals"
+              icon={<Scale aria-hidden="true" className="size-5" />}
+              label="目标体重"
+              tone="weight"
+              tourId="goal-weight"
+            >
+              <MetricContent fallback="设置目标体重后显示差距" metric={weightMetric} />
+            </HomeCard>
 
-          <HomeCard
-            action="设目标"
-            href="/goals"
-            icon={<Ruler aria-hidden="true" className="size-5" />}
-            label="目标腰围"
-            tone="measure"
-            tourId="goal-waist"
-          >
-            <MetricContent fallback="设置腰围目标后显示差距" metric={measureMetric} />
-          </HomeCard>
+            <HomeCard
+              action="设目标"
+              href="/goals"
+              icon={<Ruler aria-hidden="true" className="size-5" />}
+              label="目标腰围"
+              tone="measure"
+              tourId="goal-waist"
+            >
+              <MetricContent fallback="设置腰围目标后显示差距" metric={measureMetric} />
+            </HomeCard>
 
-          <HomeCard
-            action="去打卡"
-            className="home-card--wide"
-            href="/records"
-            icon={<CalendarCheck aria-hidden="true" className="size-5" />}
-            label="今日打卡"
-            tone="checkin"
-            tourId="today-checkin"
-          >
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="m-0 text-[34px] font-black leading-none text-[var(--ink-primary)] max-sm:text-[30px]">
-                  {todayDone ? "已完成" : todayStarted ? "已开始" : "未完成"}
+            <HomeCard
+              action="去打卡"
+              className="home-card--wide"
+              href="/records"
+              icon={<CalendarCheck aria-hidden="true" className="size-5" />}
+              label="今日打卡"
+              tone="checkin"
+              tourId="today-checkin"
+            >
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="m-0 text-[34px] font-black leading-none text-[var(--ink-primary)] max-sm:text-[30px]">
+                    {todayDone ? "已完成" : todayStarted ? "已开始" : "未完成"}
+                  </p>
+                  <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">{summary.todayBattle.text}</p>
+                </div>
+                <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[rgba(247,249,255,0.12)] px-3 py-2 text-sm font-black text-[var(--ink-primary)]">
+                  <Activity aria-hidden="true" className="size-4" />
+                  {summary.todayBattle.primaryActionLabel}
+                </span>
+              </div>
+            </HomeCard>
+
+            <HomeCard
+              action={runGoalUnset ? "设跑步目标" : "看分析"}
+              href={runGoalUnset ? "/goals" : "/data"}
+              icon={<Flag aria-hidden="true" className="size-5" />}
+              label="本周跑量"
+              tone="week"
+              tourId="week-run"
+            >
+              <div className="mt-4">
+                <div className="flex items-end gap-2">
+                  <span className="home-card__value">
+                    {summary.runWeek.completedDistance}
+                  </span>
+                  <span className="pb-1 text-sm font-bold text-[var(--ink-secondary)]">公里</span>
+                </div>
+                <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">
+                  {summary.runWeek.completedCount} 次 · 目标 {summary.runWeek.targetDistance} 公里
                 </p>
-                <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">{summary.todayBattle.text}</p>
               </div>
-              <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[rgba(247,249,255,0.12)] px-3 py-2 text-sm font-black text-[var(--ink-primary)]">
-                <Activity aria-hidden="true" className="size-4" />
-                {summary.todayBattle.primaryActionLabel}
-              </span>
-            </div>
-          </HomeCard>
+            </HomeCard>
 
-          <HomeCard
-            action={runGoalUnset ? "设跑步目标" : "看分析"}
-            href={runGoalUnset ? "/goals" : "/data"}
-            icon={<Flag aria-hidden="true" className="size-5" />}
-            label="本周跑量"
-            tone="week"
-            tourId="week-run"
-          >
-            <div className="mt-4">
-              <div className="flex items-end gap-2">
-                <span className="home-card__value">
-                  {summary.runWeek.completedDistance}
-                </span>
-                <span className="pb-1 text-sm font-bold text-[var(--ink-secondary)]">公里</span>
+            <HomeCard
+              action="看历史"
+              href="/history"
+              icon={<Route aria-hidden="true" className="size-5" />}
+              label="累计跑量"
+              tone="total"
+              tourId="total-run"
+            >
+              <div className="mt-4">
+                <div className="flex items-end gap-2">
+                  <span className="home-card__value">
+                    {formatNumber(totalRunDistance)}
+                  </span>
+                  <span className="pb-1 text-sm font-bold text-[var(--ink-secondary)]">公里</span>
+                </div>
+                <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">
+                  共 {allRuns.length} 次跑步记录
+                </p>
               </div>
-              <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">
-                {summary.runWeek.completedCount} 次 · 目标 {summary.runWeek.targetDistance} 公里
-              </p>
-            </div>
-          </HomeCard>
-
-          <HomeCard
-            action="看历史"
-            href="/history"
-            icon={<Route aria-hidden="true" className="size-5" />}
-            label="累计跑量"
-            tone="total"
-            tourId="total-run"
-          >
-            <div className="mt-4">
-              <div className="flex items-end gap-2">
-                <span className="home-card__value">
-                  {formatNumber(totalRunDistance)}
-                </span>
-                <span className="pb-1 text-sm font-bold text-[var(--ink-secondary)]">公里</span>
-              </div>
-              <p className="m-0 mt-3 text-sm font-semibold text-[var(--ink-secondary)]">
-                共 {allRuns.length} 次跑步记录
-              </p>
-            </div>
-          </HomeCard>
-        </section>
+            </HomeCard>
+          </section>
+        </div>
 
         <footer className="home-footer">
           <p className="m-0">
