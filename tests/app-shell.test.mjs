@@ -17,6 +17,7 @@ const navigationSource = readFileSync("lib/navigation.ts", "utf8");
 const layoutSource = readFileSync("app/layout.tsx", "utf8");
 const pageSource = readFileSync("app/page.tsx", "utf8");
 const topNavSource = readFileSync("components/layout/top-nav.tsx", "utf8");
+const logoutRouteSource = readFileSync("app/access/logout/route.ts", "utf8");
 const pageTurnControlsSource = readFileSync("components/layout/page-turn-controls.tsx", "utf8");
 const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
 const globalsSource = readFileSync("app/globals.css", "utf8");
@@ -173,6 +174,13 @@ test("跑步配速是只读计算项，不作为用户输入字段", () => {
 
 test("导航、按钮和移动端安全区具备基础交互保护", () => {
   assert.match(topNavSource, /usePathname/);
+  assert.match(topNavSource, /LogOut/);
+  assert.match(topNavSource, /action="\/access\/logout"/);
+  assert.match(logoutRouteSource, /USER_SESSION_COOKIE/);
+  assert.match(logoutRouteSource, /GUEST_SESSION_COOKIE/);
+  assert.match(logoutRouteSource, /DEVICE_TOKEN_COOKIE/);
+  assert.match(logoutRouteSource, /revokeSessionByHash/);
+  assert.match(logoutRouteSource, /deleteGuestSession/);
   assert.match(pageTurnControlsSource, /usePathname/);
   assert.match(topNavSource, /aria-current/);
   assert.match(topNavSource, /top-nav-scroll/);

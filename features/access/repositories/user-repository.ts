@@ -229,5 +229,22 @@ export function createUserRepository(appDb: AppDb = getDb()) {
         return fail(mapRepositoryError(error));
       }
     },
+
+    revokeSessionByHash(sessionTokenHash: string, nowIso: string): UserRepositoryResult<void> {
+      try {
+        appDb
+          .update(userSessions)
+          .set({
+            revokedAtIso: nowIso,
+            lastSeenAtIso: nowIso,
+          })
+          .where(and(eq(userSessions.sessionTokenHash, sessionTokenHash), isNull(userSessions.revokedAtIso)))
+          .run();
+
+        return ok(undefined);
+      } catch (error) {
+        return fail(mapRepositoryError(error));
+      }
+    },
   };
 }

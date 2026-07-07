@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Activity } from "lucide-react";
+import { Activity, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navigationItems } from "@/lib/navigation";
 
@@ -11,20 +11,32 @@ export function TopNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-[rgba(247,249,255,0.9)] backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-4 py-2 sm:px-6">
-        <Link
-          className="group flex min-w-fit items-center gap-3 rounded-md pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
-          href="/"
-        >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_10px_24px_rgba(47,109,179,0.18)] transition-transform duration-200 group-hover:-translate-y-0.5">
-            <Activity aria-hidden="true" className="size-5" />
-          </span>
-          <span className="grid leading-tight">
-            <span className="text-[17px] font-black text-[var(--ink-primary)]">
-              跑步瘦身助手
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            className="group flex min-w-fit items-center gap-3 rounded-md pr-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+            href="/"
+          >
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_10px_24px_rgba(47,109,179,0.18)] transition-transform duration-200 group-hover:-translate-y-0.5">
+              <Activity aria-hidden="true" className="size-5" />
             </span>
-            <span className="hidden text-xs font-medium text-[var(--ink-muted)] sm:block">Run. Track. Lean.</span>
-          </span>
-        </Link>
+            <span className="grid leading-tight">
+              <span className="text-[17px] font-black text-[var(--ink-primary)]">
+                跑步瘦身助手
+              </span>
+              <span className="hidden text-xs font-medium text-[var(--ink-muted)] sm:block">Run. Track. Lean.</span>
+            </span>
+          </Link>
+          <form action="/access/logout" method="post">
+            <button
+              aria-label="退出"
+              className="flex size-9 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--surface)] text-[var(--ink-secondary)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[rgba(47,109,179,0.08)] hover:text-[var(--ink-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+              title="退出"
+              type="submit"
+            >
+              <LogOut aria-hidden="true" className="size-4" />
+            </button>
+          </form>
+        </div>
 
         <nav aria-label="主导航" className="top-nav-scroll -mx-1 min-w-0 overflow-x-auto">
           <div className="flex min-w-full items-center gap-1 rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] p-1">

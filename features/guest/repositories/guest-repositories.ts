@@ -57,6 +57,10 @@ function getSession(guestSessionId: string) {
   return session;
 }
 
+export function deleteGuestSession(guestSessionId: string) {
+  guestSessions.delete(guestSessionId);
+}
+
 function seedGuestSession(session: GuestSessionData) {
   const nowIso = new Date().toISOString();
   const today = new Date();
