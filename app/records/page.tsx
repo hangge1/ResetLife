@@ -45,7 +45,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
   const todayRuns = runRecords.ok ? runRecords.data : [];
 
   return (
-    <AppShell>
+    <AppShell authMode={auth.mode}>
       <main className="workbench-main">
         {auth.mode === "guest" ? (
           <p className="m-0 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--ink-secondary)]">

@@ -51,7 +51,7 @@ export default async function HistoryPage({ searchParams }: HistoryPageProps) {
   const entries = history.ok ? history.data : [];
 
   return (
-    <AppShell>
+    <AppShell authMode={auth.mode}>
       <main className="workbench-main">
         {auth.mode === "guest" ? (
           <p className="m-0 rounded-md border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--ink-secondary)]">

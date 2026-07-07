@@ -103,7 +103,7 @@ export default async function Home() {
   const runGoalUnset = summary.runWeek.status === "未设置";
 
   return (
-    <AppShell>
+    <AppShell authMode={auth.mode}>
       <main className="home-main">
         <OnboardingGuide />
         <div className="home-content">

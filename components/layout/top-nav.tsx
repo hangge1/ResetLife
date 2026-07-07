@@ -4,9 +4,12 @@ import Link from "next/link";
 import { Activity, LogOut } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navigationItems } from "@/lib/navigation";
+import type { AuthContext } from "@/features/access/services/auth-context";
 
-export function TopNav() {
+export function TopNav({ authMode }: { authMode?: AuthContext["mode"] }) {
   const pathname = usePathname();
+  const visibleNavigationItems =
+    authMode === "guest" ? navigationItems.filter((item) => item.href !== "/settings") : navigationItems;
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-[rgba(247,249,255,0.9)] backdrop-blur-xl">
@@ -40,7 +43,7 @@ export function TopNav() {
 
         <nav aria-label="主导航" className="top-nav-scroll -mx-1 min-w-0 overflow-x-auto">
           <div className="flex min-w-full items-center gap-1 rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] p-1">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const Icon = item.icon;
               const active =
                 pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));

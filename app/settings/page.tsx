@@ -98,7 +98,7 @@ export default async function SettingsPage() {
   const trustedDeviceList = trustedDevices.ok ? trustedDevices.data : [];
 
   return (
-    <AppShell>
+    <AppShell authMode={auth.mode}>
       <main className="workbench-main">
         <section className="workbench-hero">
           <p className="workbench-eyebrow">设置中心</p>

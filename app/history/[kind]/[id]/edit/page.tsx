@@ -32,7 +32,7 @@ export default async function EditHistoryRecordPage({ params }: EditHistoryRecor
     }
 
     return (
-      <AppShell>
+      <AppShell authMode={auth.mode}>
         <main className="page-main">
           <section className="card p-4">
             <div className="mb-4">
@@ -62,7 +62,7 @@ export default async function EditHistoryRecordPage({ params }: EditHistoryRecor
     }
 
     return (
-      <AppShell>
+      <AppShell authMode={auth.mode}>
         <main className="page-main">
           <section className="card p-4">
             <div className="mb-4">

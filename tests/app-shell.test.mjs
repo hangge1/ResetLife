@@ -176,6 +176,8 @@ test("导航、按钮和移动端安全区具备基础交互保护", () => {
   assert.match(topNavSource, /usePathname/);
   assert.match(topNavSource, /LogOut/);
   assert.match(topNavSource, /action="\/access\/logout"/);
+  assert.match(topNavSource, /authMode === "guest"/);
+  assert.match(topNavSource, /item\.href !== "\/settings"/);
   assert.match(logoutRouteSource, /USER_SESSION_COOKIE/);
   assert.match(logoutRouteSource, /GUEST_SESSION_COOKIE/);
   assert.match(logoutRouteSource, /DEVICE_TOKEN_COOKIE/);
@@ -461,6 +463,22 @@ test("主要路由可以通过 Next 实际渲染", { timeout: 90_000 }, async ()
         assert.match(html, /移除/);
       }
     }
+    const guestHome = await fetch(`${actualBaseUrl}/`, {
+      headers: { cookie: "slimming_guest_session=test-guest-nav" },
+    });
+    const guestHomeHtml = await guestHome.text();
+    assert.equal(guestHome.status, 200);
+    assert.match(guestHomeHtml, /href="\/records"/);
+    assert.match(guestHomeHtml, /href="\/data"/);
+    assert.match(guestHomeHtml, /href="\/history"/);
+    assert.doesNotMatch(guestHomeHtml, /href="\/settings"/);
+
+    const guestSettings = await fetch(`${actualBaseUrl}/settings`, {
+      headers: { cookie: "slimming_guest_session=test-guest-nav" },
+      redirect: "manual",
+    });
+    assert.ok(guestSettings.status >= 300 && guestSettings.status < 400);
+    assert.match(guestSettings.headers.get("location") ?? "", /\/$/);
   } finally {
     if (child.exitCode === null) {
       child.kill();
