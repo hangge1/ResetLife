@@ -3,16 +3,14 @@ import { existsSync, readdirSync, statSync } from "node:fs";
 import { basename, resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
-const defaultHost = "112.124.69.114";
-const defaultUser = "root";
 const defaultRoot = "/www/wwwroot";
 
 const args = new Set(process.argv.slice(2));
 const skipRelease = args.has("--skip-release");
 const dryRun = args.has("--dry-run");
 
-const host = process.env.DEPLOY_HOST ?? defaultHost;
-const user = process.env.DEPLOY_USER ?? defaultUser;
+const host = readRequiredEnv("DEPLOY_HOST", "cloud server host or public IP");
+const user = readRequiredEnv("DEPLOY_USER", "SSH login username");
 const deployRoot = process.env.DEPLOY_ROOT ?? defaultRoot;
 const identityFile = process.env.DEPLOY_IDENTITY_FILE;
 const sshPort = process.env.DEPLOY_PORT;
@@ -26,6 +24,26 @@ const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/slimming-assis
 
 if (!/^\d{2,5}$/.test(appPort)) {
   throw new Error(`DEPLOY_APP_PORT must be a port number, received: ${appPort}`);
+}
+
+function readRequiredEnv(name, description) {
+  const value = process.env[name]?.trim();
+
+  if (value) {
+    return value;
+  }
+
+  console.error(`Missing required environment variable: ${name}`);
+  console.error(`Set ${name} to the ${description}.`);
+  console.error("");
+  console.error("PowerShell example:");
+  console.error(`  $env:${name}=\"...\"`);
+  console.error("");
+  console.error("Bash example:");
+  console.error(`  export ${name}=\"...\"`);
+  console.error("");
+  console.error("Do not commit server usernames, passwords, or private keys.");
+  process.exit(1);
 }
 
 function resolveLocalCommand(command, commandArgs) {

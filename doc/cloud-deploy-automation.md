@@ -1,10 +1,10 @@
 # 云服务器自动化部署
 
-目标服务器默认值：
+目标服务器信息不写入代码仓库，需要部署时通过环境变量提供：
 
-- Host: `112.124.69.114`
-- User: `root`
-- Deploy root: `/www/wwwroot`
+- `DEPLOY_HOST`：服务器公网 IP 或域名
+- `DEPLOY_USER`：SSH 登录用户名
+- `DEPLOY_ROOT`：部署根目录，默认 `/www/wwwroot`
 
 脚本负责构建、上传、解压、安装生产依赖、执行 `prepare:bt`、切换当前版本并重启应用进程。
 脚本会维护一个固定入口目录：
@@ -28,7 +28,7 @@
 
 ```bash
 ssh-keygen -t ed25519 -C "slimming-assistant-deploy"
-ssh-copy-id root@112.124.69.114
+ssh-copy-id <ssh-user>@<server-host>
 ```
 
 Windows 如果没有 `ssh-copy-id`，可以手动把本机 `~/.ssh/id_ed25519.pub` 内容追加到服务器：
@@ -75,8 +75,8 @@ DEPLOY_ARCHIVE=dist/releases/slimming-assistant-0.1.0-xxx.tar.gz npm run deploy:
 ## 可配置环境变量
 
 ```bash
-DEPLOY_HOST=112.124.69.114
-DEPLOY_USER=root
+DEPLOY_HOST=<server-host>
+DEPLOY_USER=<ssh-user>
 DEPLOY_ROOT=/www/wwwroot
 DEPLOY_PORT=22
 DEPLOY_IDENTITY_FILE=~/.ssh/id_ed25519
@@ -91,8 +91,22 @@ DEPLOY_RESTART=1
 
 示例：
 
+PowerShell：
+
+```powershell
+$env:DEPLOY_HOST="<server-host>"
+$env:DEPLOY_USER="<ssh-user>"
+$env:DEPLOY_IDENTITY_FILE="$env:USERPROFILE\.ssh\id_ed25519"
+npm run deploy:cloud
+```
+
+Bash：
+
 ```bash
-DEPLOY_IDENTITY_FILE=~/.ssh/id_ed25519 npm run deploy:cloud
+export DEPLOY_HOST="<server-host>"
+export DEPLOY_USER="<ssh-user>"
+export DEPLOY_IDENTITY_FILE="$HOME/.ssh/id_ed25519"
+npm run deploy:cloud
 ```
 
 ## 宝塔项目只需要配置一次
