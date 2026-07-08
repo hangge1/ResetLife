@@ -25,6 +25,7 @@ const pageTurnControlsSource = readFileSync("components/layout/page-turn-control
 const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
 const globalsSource = readFileSync("app/globals.css", "utf8");
 const uiScreenshotSource = readFileSync("scripts/ui-screenshot.mjs", "utf8");
+const deployCloudSource = readFileSync("scripts/deploy-cloud.mjs", "utf8");
 const packageSource = JSON.parse(readFileSync("package.json", "utf8"));
 const saveHealthRecordActionSource = readFileSync("features/records/actions/save-health-record.ts", "utf8");
 const saveRunRecordActionSource = readFileSync("features/records/actions/save-run-record.ts", "utf8");
@@ -218,7 +219,18 @@ test("access pages use a motion background and prominent title treatment", () =>
   assert.match(globalsSource, /@keyframes auth-track-flow/);
   assert.match(globalsSource, /@keyframes auth-runner-pulse/);
   assert.match(globalsSource, /\.auth-brand\s*{[^}]*font-size:\s*24px/s);
+  assert.match(globalsSource, /\.auth-card__header\s*{[^}]*text-align:\s*center/s);
   assert.match(globalsSource, /\.auth-title\s*{[^}]*font-size:\s*42px/s);
+  assert.match(globalsSource, /\.auth-title\s*{[^}]*text-align:\s*center/s);
+});
+
+test("cloud deploy cleans old release directories after switching current", () => {
+  assert.match(deployCloudSource, /DEPLOY_KEEP_RELEASES/);
+  assert.match(deployCloudSource, /readPositiveIntegerEnv\("DEPLOY_KEEP_RELEASES", "3"\)/);
+  assert.match(deployCloudSource, /touch \$\{shellQuote\(remotePackageRoot\)\}/);
+  assert.match(deployCloudSource, /slimming-assistant-\*\.tar\.gz/);
+  assert.match(deployCloudSource, /slimming-assistant-\[0-9\]\*/);
+  assert.match(deployCloudSource, /rm -rf -- "\$old_dir"/);
 });
 
 test("桌面端主内容使用可用宽度，不固定在窄容器中", () => {

@@ -31,6 +31,7 @@
 4. 认证方式：本机是否已有 SSH Key；如果没有，让用户输入密码完成 SSH Key 配置。
 5. `DEPLOY_ROOT`：部署根目录，默认 `/www/wwwroot`。
 6. `DEPLOY_APP_PORT`：应用监听端口，默认 `3000`。
+7. `DEPLOY_KEEP_RELEASES`：部署后保留的最近版本目录数量，默认 `3`。
 
 不要要求用户把密码写入文件。需要密码时，说明只用于当前 SSH 连接或让用户在终端提示中输入。
 
@@ -100,6 +101,7 @@ DEPLOY_SQLITE_PATH=/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlit
 DEPLOY_APP_PORT=3000
 DEPLOY_START_SCRIPT=start:bt:3000
 DEPLOY_RESTART=1
+DEPLOY_KEEP_RELEASES=3
 ```
 
 ## 部署前检查
@@ -126,6 +128,7 @@ npm run deploy:cloud
 4. 使用共享 SQLite 路径执行迁移。
 5. 更新 `slimming-assistant-current` 指向新版本。
 6. 重启 `DEPLOY_APP_PORT` 上的应用。
+7. 删除旧发布目录和残留压缩包，只保留最近 `DEPLOY_KEEP_RELEASES` 个 `slimming-assistant-数字版本` 目录。
 
 ## 部署后验证
 

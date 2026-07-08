@@ -23,6 +23,7 @@ Collect these before running a real deploy:
 - `DEPLOY_PORT`: SSH port, default `22`.
 - Auth method: existing SSH key, identity file, or user-entered password.
 - Target app port, default `3000`.
+- Release retention, default `DEPLOY_KEEP_RELEASES=3`.
 
 If the user wants details or troubleshooting, read `references/next-bt-node.md`.
 
@@ -98,5 +99,6 @@ The project deploy script owns these conventions:
 - shared SQLite database: `/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlite`
 - production preparation: `npm run prepare:bt`
 - default restart script: `npm run start:bt:3000`
+- default release cleanup: keep the latest 3 `slimming-assistant-*` version directories; override with `DEPLOY_KEEP_RELEASES`
 
 Do not manually reimplement these steps unless the script is broken. Fix `scripts/deploy-cloud.mjs` instead.

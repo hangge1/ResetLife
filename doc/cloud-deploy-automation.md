@@ -5,8 +5,9 @@
 - `DEPLOY_HOST`：服务器公网 IP 或域名
 - `DEPLOY_USER`：SSH 登录用户名
 - `DEPLOY_ROOT`：部署根目录，默认 `/www/wwwroot`
+- `DEPLOY_KEEP_RELEASES`：部署后保留的最近版本目录数量，默认 `3`
 
-脚本负责构建、上传、解压、安装生产依赖、执行 `prepare:bt`、切换当前版本并重启应用进程。
+脚本负责构建、上传、解压、安装生产依赖、执行 `prepare:bt`、切换当前版本、重启应用进程，并清理旧发布目录。
 脚本会维护一个固定入口目录：
 
 ```bash
@@ -87,6 +88,7 @@ DEPLOY_SQLITE_PATH=/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlit
 DEPLOY_APP_PORT=3000
 DEPLOY_START_SCRIPT=start:bt:3000
 DEPLOY_RESTART=1
+DEPLOY_KEEP_RELEASES=3
 ```
 
 示例：
@@ -149,10 +151,16 @@ npm run deploy:cloud
 DEPLOY_RESTART=0 npm run deploy:cloud
 ```
 
-旧版本目录会保留在 `/www/wwwroot` 下，必要时可以手动把 `slimming-assistant-current` 指回旧目录回滚：
+默认只保留最近 3 个版本目录，旧版本会在部署成功后自动删除。必要时可以手动把 `slimming-assistant-current` 指回仍保留的旧目录回滚：
 
 ```bash
 ln -sfn /www/wwwroot/<old-release-folder> /www/wwwroot/slimming-assistant-current
+```
+
+如果服务器空间紧张，可以临时只保留当前版本：
+
+```bash
+DEPLOY_KEEP_RELEASES=1 npm run deploy:cloud
 ```
 
 不要把 `npm install`、`npm run build`、`npm run release` 放到宝塔启动命令里。

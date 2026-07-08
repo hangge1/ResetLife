@@ -21,6 +21,7 @@ const restartApp = process.env.DEPLOY_RESTART !== "0";
 const startScript = process.env.DEPLOY_START_SCRIPT ?? `start:bt:${appPort}`;
 const dataRoot = process.env.DEPLOY_DATA_ROOT ?? `${deployRoot}/slimming-assistant-data`;
 const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/slimming-assistant.sqlite`;
+const keepReleaseCount = readPositiveIntegerEnv("DEPLOY_KEEP_RELEASES", "3");
 
 if (!/^\d{2,5}$/.test(appPort)) {
   throw new Error(`DEPLOY_APP_PORT must be a port number, received: ${appPort}`);
@@ -44,6 +45,21 @@ function readRequiredEnv(name, description) {
   console.error("");
   console.error("Do not commit server usernames, passwords, or private keys.");
   process.exit(1);
+}
+
+function readPositiveIntegerEnv(name, defaultValue) {
+  const rawValue = process.env[name]?.trim() || defaultValue;
+
+  if (!/^\d+$/.test(rawValue)) {
+    throw new Error(`${name} must be a positive integer, received: ${rawValue}`);
+  }
+
+  const value = Number(rawValue);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`${name} must be greater than or equal to 1, received: ${rawValue}`);
+  }
+
+  return value;
 }
 
 function resolveLocalCommand(command, commandArgs) {
@@ -159,6 +175,7 @@ console.log(`Deploy target: ${remote}:${remotePackageRoot}`);
 console.log(`Current link: ${currentLink}`);
 console.log(`SQLite path: ${sqlitePath}`);
 console.log(`Restart app: ${restartApp ? `yes, port ${appPort}` : "no"}`);
+console.log(`Keep releases: ${keepReleaseCount}`);
 console.log(`Archive: ${archivePath}`);
 
 run("ssh", [...sshBaseArgs(), remote, `mkdir -p ${shellQuote(deployRoot)}`]);
@@ -177,6 +194,7 @@ const remoteCommand = [
   `cd ${shellQuote(remotePackageRoot)}`,
   `SQLITE_PATH=${shellQuote(sqlitePath)} npm run prepare:bt`,
   `ln -sfn ${shellQuote(remotePackageRoot)} ${shellQuote(currentLink)}`,
+  `touch ${shellQuote(remotePackageRoot)}`,
   ...(restartApp
     ? [
         `port_pids=$(ss -ltnp 2>/dev/null | sed -n 's/.*:${appPort} .*pid=\\([0-9][0-9]*\\).*/\\1/p' | sort -u)`,
@@ -188,10 +206,13 @@ const remoteCommand = [
         `(ss -ltnp 2>/dev/null | grep -q ${shellQuote(`:${appPort}`)} || (tail -80 .next-start.log; exit 1))`,
       ]
     : []),
+  `find ${shellQuote(deployRoot)} -maxdepth 1 -type f \\( -name 'slimming-assistant-*.tar.gz' -o -name 'slimming-assistant-*.zip' \\) -delete`,
+  `find ${shellQuote(deployRoot)} -maxdepth 1 -type d -name 'slimming-assistant-[0-9]*' -printf '%T@ %p\\n' | sort -rn | awk 'NR > ${keepReleaseCount} { sub(/^[^ ]+ /, ""); print }' | while IFS= read -r old_dir; do rm -rf -- "$old_dir"; done`,
   `echo`,
   `echo "Deployment prepared at ${remotePackageRoot}"`,
   `echo "Current link points to ${currentLink}"`,
   `echo "SQLite path is ${sqlitePath}"`,
+  `echo "Kept latest ${keepReleaseCount} release directories under ${deployRoot}"`,
   restartApp
     ? `echo "App restarted on port ${appPort} with npm run ${startScript}"`
     : `echo "App restart skipped because DEPLOY_RESTART=0"`,

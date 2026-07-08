@@ -21,7 +21,10 @@ DEPLOY_SQLITE_PATH=/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlit
 DEPLOY_APP_PORT=3000
 DEPLOY_START_SCRIPT=start:bt:3000
 DEPLOY_RESTART=1
+DEPLOY_KEEP_RELEASES=3
 ```
+
+After a successful deployment, the script deletes stale uploaded archives and keeps only the latest `DEPLOY_KEEP_RELEASES` version directories matching `slimming-assistant-[0-9]*`. The shared SQLite directory is outside this pattern and must not be deleted.
 
 ## BT Panel Setup
 
