@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Activity, CalendarCheck, Flag, Ruler, Route, Scale } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { GuestModeNotice } from "@/components/layout/guest-mode-notice";
+import { LoginWelcomeToast } from "@/components/layout/login-welcome-toast";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
 import { createDashboardSummary, type DashboardFocusMetric } from "@/features/dashboard/services/dashboard-summary";
 import { requireAuthContext } from "@/features/access/services/route-guards";
@@ -15,6 +16,12 @@ import { getTodayLocalDate } from "@/lib/dates";
 export const dynamic = "force-dynamic";
 
 type CardTone = "weight" | "measure" | "checkin" | "week" | "total";
+
+type HomeProps = {
+  searchParams?: Promise<{
+    welcome?: string;
+  }>;
+};
 
 function getSafeData<T>(result: { ok: true; data: T } | { ok: false }) {
   return result.ok ? result.data : null;
@@ -82,8 +89,10 @@ function MetricContent({ metric, fallback }: { metric?: DashboardFocusMetric; fa
   );
 }
 
-export default async function Home() {
+export default async function Home({ searchParams }: HomeProps) {
   const auth = await requireAuthContext();
+  const params = await searchParams;
+  const welcomeName = auth.mode === "user" ? params?.welcome?.trim().slice(0, 32) ?? "" : "";
 
   const todayLocalDate = getTodayLocalDate();
   const recordsRepository = createRecordsRepositoryForAuth(auth);
@@ -106,6 +115,7 @@ export default async function Home() {
   return (
     <AppShell authMode={auth.mode}>
       <main className="home-main">
+        {welcomeName ? <LoginWelcomeToast name={welcomeName} /> : null}
         <OnboardingGuide />
         <div className="home-content">
           {auth.mode === "guest" ? (

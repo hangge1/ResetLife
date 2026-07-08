@@ -28,7 +28,15 @@ export type ChangeUserPasswordInput = {
 };
 
 export type UserAuthResult =
-  | { ok: true; userId: string; role: UserRole; sessionToken: string; expiresAtIso: string }
+  | {
+      ok: true;
+      userId: string;
+      username: string;
+      displayName: string | null;
+      role: UserRole;
+      sessionToken: string;
+      expiresAtIso: string;
+    }
   | { ok: false; fieldErrors: { username?: string; password?: string; confirmPassword?: string; form?: string } };
 
 const SESSION_MAX_AGE_DAYS = 30;
@@ -71,7 +79,10 @@ function validatePassword(password: string) {
   return undefined;
 }
 
-async function createSessionForUser(repository: UserRepository, input: { userId: string; role: UserRole; nowIso: string }) {
+async function createSessionForUser(
+  repository: UserRepository,
+  input: { userId: string; username: string; displayName: string | null; role: UserRole; nowIso: string },
+) {
   const sessionToken = createSessionToken();
   const expiresAtIso = addDaysIso(input.nowIso, SESSION_MAX_AGE_DAYS);
   const session = repository.createSession({
@@ -88,6 +99,8 @@ async function createSessionForUser(repository: UserRepository, input: { userId:
   return {
     ok: true as const,
     userId: input.userId,
+    username: input.username,
+    displayName: input.displayName,
     role: input.role,
     sessionToken,
     expiresAtIso,
@@ -144,7 +157,13 @@ export async function createInitialAdminUser(
     return { ok: false, fieldErrors: { form: created.error.message } };
   }
 
-  return createSessionForUser(repository, { userId: created.data.id, role: "admin", nowIso });
+  return createSessionForUser(repository, {
+    userId: created.data.id,
+    username: created.data.username,
+    displayName: created.data.displayName,
+    role: "admin",
+    nowIso,
+  });
 }
 
 export async function loginUser(repository: UserRepository, input: LoginInput): Promise<UserAuthResult> {
@@ -178,7 +197,13 @@ export async function loginUser(repository: UserRepository, input: LoginInput): 
     return { ok: false, fieldErrors: { form: "用户名或密码不正确" } };
   }
 
-  return createSessionForUser(repository, { userId: found.data.id, role: found.data.role as UserRole, nowIso });
+  return createSessionForUser(repository, {
+    userId: found.data.id,
+    username: found.data.username,
+    displayName: found.data.displayName,
+    role: found.data.role as UserRole,
+    nowIso,
+  });
 }
 
 export function resolveSession(repository: UserRepository, sessionToken: string | null, nowIso = new Date().toISOString()) {

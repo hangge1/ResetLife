@@ -25,6 +25,16 @@ function getHomeUrl(request: Request) {
   return createRedirectUrlFromRefererPath(request, "/access/verify", "/");
 }
 
+function addWelcomeSearchParam(url: URL, name: string) {
+  const welcomeName = name.trim().slice(0, 32);
+
+  if (welcomeName) {
+    url.searchParams.set("welcome", welcomeName);
+  }
+
+  return url;
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
   const result = await loginUser(createUserRepository(), {
@@ -36,7 +46,10 @@ export async function POST(request: Request) {
     return redirectWithErrors(request, result.fieldErrors);
   }
 
-  const response = NextResponse.redirect(getHomeUrl(request), { status: 303 });
+  const response = NextResponse.redirect(
+    addWelcomeSearchParam(getHomeUrl(request), result.displayName || result.username),
+    { status: 303 },
+  );
   response.cookies.set(USER_SESSION_COOKIE, result.sessionToken, {
     httpOnly: true,
     sameSite: "lax",

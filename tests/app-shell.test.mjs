@@ -18,8 +18,10 @@ const layoutSource = readFileSync("app/layout.tsx", "utf8");
 const pageSource = readFileSync("app/page.tsx", "utf8");
 const topNavSource = readFileSync("components/layout/top-nav.tsx", "utf8");
 const logoutRouteSource = readFileSync("app/access/logout/route.ts", "utf8");
+const verifySubmitRouteSource = readFileSync("app/access/verify/submit/route.ts", "utf8");
 const verifyAccessPageSource = readFileSync("app/access/verify/page.tsx", "utf8");
 const createAccessPageSource = readFileSync("app/access/create/page.tsx", "utf8");
+const loginWelcomeToastSource = readFileSync("components/layout/login-welcome-toast.tsx", "utf8");
 const verifyAccessPasswordFormSource = readFileSync("features/access/components/verify-access-password-form.tsx", "utf8");
 const pageTurnControlsSource = readFileSync("components/layout/page-turn-controls.tsx", "utf8");
 const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
@@ -223,6 +225,20 @@ test("access pages use a motion background and prominent title treatment", () =>
   assert.match(globalsSource, /\.auth-card__header\s*{[^}]*text-align:\s*center/s);
   assert.match(globalsSource, /\.auth-title\s*{[^}]*font-size:\s*42px/s);
   assert.match(globalsSource, /\.auth-title\s*{[^}]*text-align:\s*center/s);
+});
+
+test("login success shows a one-time welcome toast on the home page", () => {
+  assert.match(verifySubmitRouteSource, /addWelcomeSearchParam/);
+  assert.match(verifySubmitRouteSource, /url\.searchParams\.set\("welcome"/);
+  assert.match(verifySubmitRouteSource, /result\.displayName \|\| result\.username/);
+  assert.match(pageSource, /searchParams/);
+  assert.match(pageSource, /LoginWelcomeToast/);
+  assert.match(pageSource, /welcomeName/);
+  assert.match(loginWelcomeToastSource, /欢迎\{name\}/);
+  assert.match(loginWelcomeToastSource, /history\.replaceState/);
+  assert.match(loginWelcomeToastSource, /url\.searchParams\.delete\("welcome"\)/);
+  assert.match(globalsSource, /\.login-welcome-toast/);
+  assert.match(globalsSource, /@keyframes login-welcome-pop/);
 });
 
 test("cloud deploy cleans old release directories after switching current", () => {
