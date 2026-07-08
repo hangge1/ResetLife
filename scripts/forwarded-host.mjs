@@ -66,8 +66,22 @@ function setHeader(headers, name, value) {
 }
 
 export function normalizeForwardedHostHeaders(headers) {
-  const proto = firstHeaderValue(headers["x-forwarded-proto"]);
+  const xScheme = firstHeaderValue(headers["x-scheme"]);
+  const xHost = firstHeaderValue(headers["x-host"]);
+  const forwardedProto = firstHeaderValue(headers["x-forwarded-proto"]);
+  const forwardedHost = firstHeaderValue(headers["x-forwarded-host"]);
+  const proto = forwardedProto ?? xScheme;
   const changed = [];
+
+  if (!forwardedProto && xScheme) {
+    setHeader(headers, "x-forwarded-proto", xScheme);
+    changed.push({ headerName: "x-forwarded-proto", from: "", to: xScheme });
+  }
+
+  if (!forwardedHost && xHost) {
+    setHeader(headers, "x-forwarded-host", xHost);
+    changed.push({ headerName: "x-forwarded-host", from: "", to: xHost });
+  }
 
   for (const headerName of ["x-forwarded-host", "host"]) {
     const value = firstHeaderValue(headers[headerName]);

@@ -17,6 +17,16 @@ const deployRoot = process.env.DEPLOY_ROOT ?? defaultRoot;
 const identityFile = process.env.DEPLOY_IDENTITY_FILE;
 const sshPort = process.env.DEPLOY_PORT;
 const explicitArchive = process.env.DEPLOY_ARCHIVE;
+const currentLink = process.env.DEPLOY_CURRENT_LINK ?? `${deployRoot}/slimming-assistant-current`;
+const appPort = process.env.DEPLOY_APP_PORT ?? "3000";
+const restartApp = process.env.DEPLOY_RESTART !== "0";
+const startScript = process.env.DEPLOY_START_SCRIPT ?? `start:bt:${appPort}`;
+const dataRoot = process.env.DEPLOY_DATA_ROOT ?? `${deployRoot}/slimming-assistant-data`;
+const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/slimming-assistant.sqlite`;
+
+if (!/^\d{2,5}$/.test(appPort)) {
+  throw new Error(`DEPLOY_APP_PORT must be a port number, received: ${appPort}`);
+}
 
 function resolveLocalCommand(command, commandArgs) {
   if (process.platform === "win32" && command === "npm") {
@@ -128,6 +138,9 @@ const remote = `${user}@${host}`;
 
 console.log("");
 console.log(`Deploy target: ${remote}:${remotePackageRoot}`);
+console.log(`Current link: ${currentLink}`);
+console.log(`SQLite path: ${sqlitePath}`);
+console.log(`Restart app: ${restartApp ? `yes, port ${appPort}` : "no"}`);
 console.log(`Archive: ${archivePath}`);
 
 run("ssh", [...sshBaseArgs(), remote, `mkdir -p ${shellQuote(deployRoot)}`]);
@@ -141,11 +154,29 @@ const remoteCommand = [
   `set -e`,
   extractCommand,
   `rm -f ${shellQuote(remoteArchive)}`,
+  `mkdir -p ${shellQuote(dataRoot)}`,
+  `[ -f ${shellQuote(sqlitePath)} ] || ([ -f ${shellQuote(`${remotePackageRoot}/data/slimming-assistant.sqlite`)} ] && cp -p ${shellQuote(`${remotePackageRoot}/data/slimming-assistant.sqlite`)} ${shellQuote(sqlitePath)} || true)`,
   `cd ${shellQuote(remotePackageRoot)}`,
-  `npm run prepare:bt`,
+  `SQLITE_PATH=${shellQuote(sqlitePath)} npm run prepare:bt`,
+  `ln -sfn ${shellQuote(remotePackageRoot)} ${shellQuote(currentLink)}`,
+  ...(restartApp
+    ? [
+        `port_pids=$(ss -ltnp 2>/dev/null | sed -n 's/.*:${appPort} .*pid=\\([0-9][0-9]*\\).*/\\1/p' | sort -u)`,
+        `for pid in $port_pids; do parent=$(ps -o ppid= -p "$pid" | tr -d ' '); kill "$pid" 2>/dev/null || true; if [ -n "$parent" ] && [ "$parent" != "1" ]; then kill "$parent" 2>/dev/null || true; fi; done`,
+        `sleep 2`,
+        `cd ${shellQuote(currentLink)}`,
+        `(SQLITE_PATH=${shellQuote(sqlitePath)} nohup npm run ${shellQuote(startScript)} > .next-start.log 2>&1 &)`,
+        `sleep 3`,
+        `(ss -ltnp 2>/dev/null | grep -q ${shellQuote(`:${appPort}`)} || (tail -80 .next-start.log; exit 1))`,
+      ]
+    : []),
   `echo`,
   `echo "Deployment prepared at ${remotePackageRoot}"`,
-  `echo "Start command remains: npm run start:bt"`,
+  `echo "Current link points to ${currentLink}"`,
+  `echo "SQLite path is ${sqlitePath}"`,
+  restartApp
+    ? `echo "App restarted on port ${appPort} with npm run ${startScript}"`
+    : `echo "App restart skipped because DEPLOY_RESTART=0"`,
 ].join(" && ");
 
 run("ssh", [...sshBaseArgs(), remote, remoteCommand]);

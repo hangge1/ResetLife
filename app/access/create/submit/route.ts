@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createUserRepository } from "@/features/access/repositories/user-repository";
 import { USER_SESSION_COOKIE } from "@/features/access/services/auth-context";
 import { shouldUseSecureDeviceCookie } from "@/features/access/services/cookie-security";
+import { createRedirectUrl, createRedirectUrlFromRefererPath } from "@/features/access/services/redirect-url";
 import { createInitialAdminUser } from "@/features/access/services/user-auth-service";
 
 function redirectWithErrors(request: Request, fieldErrors: { username?: string; password?: string; confirmPassword?: string; form?: string }) {
@@ -17,35 +18,11 @@ function redirectWithErrors(request: Request, fieldErrors: { username?: string; 
 }
 
 function getAccessPageUrl(request: Request, page: "create" | "verify") {
-  const referer = request.headers.get("referer");
-
-  if (referer) {
-    const url = new URL(referer);
-    url.search = "";
-    url.hash = "";
-    return url;
-  }
-
-  return new URL(`/access/${page}`, request.url);
+  return createRedirectUrl(request, `/access/${page}`);
 }
 
 function getHomeUrl(request: Request) {
-  const referer = request.headers.get("referer");
-  const marker = "/access/create";
-
-  if (referer) {
-    const url = new URL(referer);
-
-    if (url.pathname.endsWith(marker)) {
-      const basePath = url.pathname.slice(0, -marker.length);
-      url.pathname = basePath ? `${basePath}/` : "/";
-      url.search = "";
-      url.hash = "";
-      return url;
-    }
-  }
-
-  return new URL("/", request.url);
+  return createRedirectUrlFromRefererPath(request, "/access/create", "/");
 }
 
 export async function POST(request: Request) {

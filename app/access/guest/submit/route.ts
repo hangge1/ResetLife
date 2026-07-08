@@ -2,24 +2,10 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { GUEST_SESSION_COOKIE } from "@/features/access/services/auth-context";
 import { shouldUseSecureDeviceCookie } from "@/features/access/services/cookie-security";
+import { createRedirectUrlFromRefererPath } from "@/features/access/services/redirect-url";
 
 function getHomeUrl(request: Request) {
-  const referer = request.headers.get("referer");
-  const marker = "/access/verify";
-
-  if (referer) {
-    const url = new URL(referer);
-
-    if (url.pathname.endsWith(marker)) {
-      const basePath = url.pathname.slice(0, -marker.length);
-      url.pathname = basePath ? `${basePath}/` : "/";
-      url.search = "";
-      url.hash = "";
-      return url;
-    }
-  }
-
-  return new URL("/", request.url);
+  return createRedirectUrlFromRefererPath(request, "/access/verify", "/");
 }
 
 export async function POST(request: Request) {

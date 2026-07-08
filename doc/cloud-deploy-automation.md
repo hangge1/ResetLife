@@ -6,7 +6,21 @@
 - User: `root`
 - Deploy root: `/www/wwwroot`
 
-脚本只负责构建、上传、解压、安装生产依赖和执行 `prepare:bt`。网站启动仍由宝塔或你手动处理。
+脚本负责构建、上传、解压、安装生产依赖、执行 `prepare:bt`、切换当前版本并重启应用进程。
+脚本会维护一个固定入口目录：
+
+```bash
+/www/wwwroot/slimming-assistant-current
+```
+
+以后宝塔项目可以固定配置到这个目录；每次部署时脚本会把它切换到最新版本目录。
+用户数据会固定保存在共享目录：
+
+```bash
+/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlite
+```
+
+不要把生产数据放在某个版本目录的 `data/` 下，否则切换版本时容易误以为账号或个人数据丢失。
 
 ## 推荐：先配置 SSH Key
 
@@ -35,6 +49,8 @@ npm run deploy:cloud
 2. 上传最新 `dist/releases/*.tar.gz` 到 `/www/wwwroot`
 3. 在服务器解压到 `/www/wwwroot/<release-folder>`
 4. 在服务器执行 `npm run prepare:bt`
+5. 更新 `/www/wwwroot/slimming-assistant-current` 指向新版本
+6. 使用共享 SQLite 路径重启 `3000` 端口上的应用进程
 
 `prepare:bt` 会自动处理：
 
@@ -65,6 +81,12 @@ DEPLOY_ROOT=/www/wwwroot
 DEPLOY_PORT=22
 DEPLOY_IDENTITY_FILE=~/.ssh/id_ed25519
 DEPLOY_ARCHIVE=dist/releases/xxx.tar.gz
+DEPLOY_CURRENT_LINK=/www/wwwroot/slimming-assistant-current
+DEPLOY_DATA_ROOT=/www/wwwroot/slimming-assistant-data
+DEPLOY_SQLITE_PATH=/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlite
+DEPLOY_APP_PORT=3000
+DEPLOY_START_SCRIPT=start:bt:3000
+DEPLOY_RESTART=1
 ```
 
 示例：
@@ -73,24 +95,50 @@ DEPLOY_ARCHIVE=dist/releases/xxx.tar.gz
 DEPLOY_IDENTITY_FILE=~/.ssh/id_ed25519 npm run deploy:cloud
 ```
 
-## 部署后启动
+## 宝塔项目只需要配置一次
 
-脚本不会启动网站。部署完成后，目标目录会输出：
+推荐把宝塔 Node 项目的根目录设置为：
+
+```bash
+/www/wwwroot/slimming-assistant-current
+```
+
+启动命令设置为：
+
+```bash
+npm run start:bt:3000
+```
+
+如果你仍然使用宝塔手动启动，建议在项目环境变量里设置：
+
+```bash
+SQLITE_PATH=/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlite
+```
+
+以后不要再删除旧项目、添加新项目。执行：
+
+```bash
+npm run deploy:cloud
+```
+
+脚本会自动切换 `slimming-assistant-current` 并重启 `3000` 端口应用。
+
+部署完成后，目标目录会输出：
 
 ```bash
 /www/wwwroot/<release-folder>
 ```
 
-进入该目录后启动：
+如果临时不想让脚本重启应用，可以执行：
 
 ```bash
-npm run start:bt
+DEPLOY_RESTART=0 npm run deploy:cloud
 ```
 
-宝塔启动命令也保持：
+旧版本目录会保留在 `/www/wwwroot` 下，必要时可以手动把 `slimming-assistant-current` 指回旧目录回滚：
 
 ```bash
-npm run start:bt
+ln -sfn /www/wwwroot/<old-release-folder> /www/wwwroot/slimming-assistant-current
 ```
 
 不要把 `npm install`、`npm run build`、`npm run release` 放到宝塔启动命令里。

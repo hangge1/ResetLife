@@ -45,3 +45,17 @@ test("mutates forwarded host headers before Next handles the request", () => {
   assert.equal(headers["x-forwarded-host"], "www.hangge.xyz");
   assert.equal(headers.host, "127.0.0.1:3000");
 });
+
+test("promotes BT x-host and x-scheme headers to standard forwarded headers", () => {
+  const headers = {
+    "x-host": "www.hangge.xyz:443",
+    "x-scheme": "https",
+    host: "0.0.0.0:3000",
+  };
+
+  normalizeForwardedHostHeaders(headers);
+
+  assert.equal(headers["x-forwarded-proto"], "https");
+  assert.equal(headers["x-forwarded-host"], "www.hangge.xyz");
+  assert.equal(headers.host, "0.0.0.0:3000");
+});
