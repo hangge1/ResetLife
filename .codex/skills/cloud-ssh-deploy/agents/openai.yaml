@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cloud SSH Deploy"
+  short_description: "Deploy this project to a cloud server over SSH"
+  default_prompt: "Use $cloud-ssh-deploy to deploy this project to my cloud server."

@@ -2,6 +2,18 @@
 
 本手册用于让 AI 或维护者在任意电脑拉取最新代码后，按同一套流程完成部署。
 
+本项目同时提供项目内 Codex Skill：
+
+```bash
+.codex/skills/cloud-ssh-deploy
+```
+
+如果当前 Codex 环境不会自动发现项目内 Skill，可以直接要求 AI：
+
+```text
+请使用项目内 .codex/skills/cloud-ssh-deploy 这个 Skill 执行云端部署。
+```
+
 ## 安全原则
 
 - 不要把服务器用户名、密码、私钥、面板地址、面板 token 写入仓库。
