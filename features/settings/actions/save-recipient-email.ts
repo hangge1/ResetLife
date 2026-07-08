@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUserAuthContext } from "@/features/access/services/route-guards";
-import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
+import {
+  createReminderRepositoryForAuth,
+  createSettingsRepositoryForAuth,
+} from "@/features/access/services/scoped-repositories";
+import { getReminderLocalNow } from "@/features/reminders/services/reminder-scheduler";
 import { parseProfileFormValues } from "../services/profile-input.ts";
 import { getProfileSettings, saveProfileSettings } from "../services/profile-settings-service.ts";
 import type { RecipientEmailFormState } from "./recipient-email-form-state";
@@ -51,6 +55,14 @@ export async function saveRecipientEmailAction(
       values,
       fieldErrors: { form: saved.fieldErrors.form ?? "收件邮箱保存失败" },
     };
+  }
+
+  if (saved.data.reminderEmail) {
+    createReminderRepositoryForAuth(auth).deleteReminderEvent(
+      getReminderLocalNow().localDate,
+      "daily_record",
+      "email",
+    );
   }
 
   revalidatePath("/settings");

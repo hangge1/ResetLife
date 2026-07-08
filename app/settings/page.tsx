@@ -152,7 +152,13 @@ export default async function SettingsPage() {
               {group.title === "个人资料" ? (
                 <ProfileForm initialState={initialProfileState} />
               ) : group.title === "邮件接收" ? (
-                <RecipientEmailForm initialState={initialRecipientEmailState} />
+                <div className="grid gap-4">
+                  <RecipientEmailForm initialState={initialRecipientEmailState} />
+                  <div className="rounded-md border border-[var(--border-soft)] bg-[var(--surface-subtle)] px-3 py-3">
+                    <p className="m-0 text-sm font-semibold text-[var(--ink-primary)]">最近邮件提醒状态</p>
+                    <p className="m-0 mt-1 text-sm text-[var(--ink-secondary)]">{emailReminderStatus}</p>
+                  </div>
+                </div>
               ) : group.title === "提醒规则" ? (
                 <ReminderRuleForm initialState={initialReminderRuleState} />
               ) : group.title === "SMTP 邮件" ? (

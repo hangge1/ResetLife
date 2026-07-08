@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUserAuthContext } from "@/features/access/services/route-guards";
-import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
+import {
+  createReminderRepositoryForAuth,
+  createSettingsRepositoryForAuth,
+} from "@/features/access/services/scoped-repositories";
+import { getReminderLocalNow } from "@/features/reminders/services/reminder-scheduler";
 import { parseReminderRuleFormValues } from "../services/reminder-rule-input.ts";
 import { saveReminderRuleSettings } from "../services/reminder-rule-settings-service.ts";
 import { reminderRuleToFormValues, type ReminderRuleFormState } from "./reminder-rule-form-state";
@@ -41,6 +45,14 @@ export async function saveReminderRuleAction(
       values,
       fieldErrors: saved.fieldErrors,
     };
+  }
+
+  if (saved.data.emailEnabled) {
+    createReminderRepositoryForAuth(auth).deleteReminderEvent(
+      getReminderLocalNow().localDate,
+      "daily_record",
+      "email",
+    );
   }
 
   revalidatePath("/settings");

@@ -399,8 +399,10 @@ test("收件邮箱保存入口受保护并保存到当前用户设置", () => {
   assert.match(recipientEmailFormStateSource, /initialRecipientEmailTestFormState/);
   assert.match(saveRecipientEmailActionSource, /requireUserAuthContext/);
   assert.match(saveRecipientEmailActionSource, /createSettingsRepositoryForAuth/);
+  assert.match(saveRecipientEmailActionSource, /createReminderRepositoryForAuth/);
   assert.match(saveRecipientEmailActionSource, /getProfileSettings/);
   assert.match(saveRecipientEmailActionSource, /saveProfileSettings/);
+  assert.match(saveRecipientEmailActionSource, /deleteReminderEvent/);
   assert.match(sendRecipientTestEmailActionSource, /requireUserAuthContext/);
   assert.match(sendRecipientTestEmailActionSource, /createGlobalSettingsRepository/);
   assert.match(sendRecipientTestEmailActionSource, /sendTestEmail/);
@@ -422,7 +424,9 @@ test("趋势阈值保存入口受保护并复用 settings service", () => {
 test("提醒规则保存入口受保护并复用 settings service", () => {
   assert.match(saveReminderRuleActionSource, /requireUserAuthContext/);
   assert.match(saveReminderRuleActionSource, /createSettingsRepositoryForAuth/);
+  assert.match(saveReminderRuleActionSource, /createReminderRepositoryForAuth/);
   assert.match(saveReminderRuleActionSource, /saveReminderRuleSettings/);
+  assert.match(saveReminderRuleActionSource, /deleteReminderEvent/);
   assert.doesNotMatch(saveReminderRuleActionSource, /\.insert\(|\.update\(|\.delete\(/);
 });
 
