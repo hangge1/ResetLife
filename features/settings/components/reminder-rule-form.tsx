@@ -9,10 +9,19 @@ type ReminderRuleFormProps = {
   initialState: ReminderRuleFormState;
 };
 
+const reminderTimeOptions = Array.from({ length: 24 * 12 }, (_, index) => {
+  const totalMinutes = index * 5;
+  const hour = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const minute = String(totalMinutes % 60).padStart(2, "0");
+
+  return `${hour}:${minute}`;
+});
+
 export function ReminderRuleForm({ initialState }: ReminderRuleFormProps) {
   const [state, formAction, pending] = useActionState(saveReminderRuleAction, initialState);
   const values = state?.values ?? initialState.values ?? initialReminderRuleFormState.values;
   const fieldErrors = state?.fieldErrors ?? initialReminderRuleFormState.fieldErrors;
+  const hasCurrentReminderTime = reminderTimeOptions.includes(values.reminderTime);
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -26,14 +35,20 @@ export function ReminderRuleForm({ initialState }: ReminderRuleFormProps) {
         <label htmlFor="reminderTime" className="text-sm font-semibold text-[var(--ink-primary)]">
           每日提醒时间
         </label>
-        <input
+        <select
           id="reminderTime"
           name="reminderTime"
           defaultValue={values.reminderTime}
-          placeholder="20:30"
           aria-describedby={fieldErrors.reminderTime ? "reminderTime-error" : undefined}
           className="min-h-11 rounded-md border border-[var(--border-soft)] bg-white px-3 text-sm text-[var(--ink-primary)] outline-none focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-[var(--primary)]"
-        />
+        >
+          {hasCurrentReminderTime ? null : <option value={values.reminderTime}>{values.reminderTime}</option>}
+          {reminderTimeOptions.map((time) => (
+            <option key={time} value={time}>
+              {time}
+            </option>
+          ))}
+        </select>
         {fieldErrors.reminderTime ? (
           <p id="reminderTime-error" className="text-sm text-[var(--danger)]">
             {fieldErrors.reminderTime}

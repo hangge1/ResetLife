@@ -48,9 +48,8 @@ export async function saveReminderRuleAction(
   }
 
   if (saved.data.emailEnabled) {
-    createReminderRepositoryForAuth(auth).deleteReminderEvent(
+    createReminderRepositoryForAuth(auth).deleteReminderEventsForDateChannel(
       getReminderLocalNow().localDate,
-      "daily_record",
       "email",
     );
   }

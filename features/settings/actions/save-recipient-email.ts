@@ -58,9 +58,8 @@ export async function saveRecipientEmailAction(
   }
 
   if (saved.data.reminderEmail) {
-    createReminderRepositoryForAuth(auth).deleteReminderEvent(
+    createReminderRepositoryForAuth(auth).deleteReminderEventsForDateChannel(
       getReminderLocalNow().localDate,
-      "daily_record",
       "email",
     );
   }

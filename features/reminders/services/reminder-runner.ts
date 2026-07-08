@@ -38,6 +38,10 @@ function isAtOrAfter(currentTime: string, reminderTime: string) {
   return currentTime >= reminderTime;
 }
 
+function emailReminderType(reminderTime: string) {
+  return `daily_record_email_${reminderTime.replace(":", "")}`;
+}
+
 function createMailTransport(config: {
   host: string;
   port: number;
@@ -97,7 +101,8 @@ export async function runReminderCheck(input: ReminderRunnerInput) {
   }
 
   if (rules.data.emailEnabled) {
-    const existingEmailEvent = input.reminderRepository.getReminderEvent(input.localDate, "daily_record", "email");
+    const reminderType = emailReminderType(rules.data.reminderTime);
+    const existingEmailEvent = input.reminderRepository.getReminderEvent(input.localDate, reminderType, "email");
     if (!existingEmailEvent.ok) {
       return { ok: false as const, fieldErrors: { form: existingEmailEvent.error.message } };
     }
@@ -109,7 +114,7 @@ export async function runReminderCheck(input: ReminderRunnerInput) {
       if (!profile.ok || !smtp.ok || !profile.data.reminderEmail || !smtp.data?.host || !smtp.data.fromEmail) {
         input.reminderRepository.createReminderEvent({
           localDate: input.localDate,
-          reminderType: "daily_record",
+          reminderType,
           channel: "email",
           status: "skipped",
           message: "邮件提醒未发送：请先配置 SMTP 和提醒收件邮箱。",
@@ -118,7 +123,7 @@ export async function runReminderCheck(input: ReminderRunnerInput) {
       } else {
         const createdEmailEvent = input.reminderRepository.createReminderEvent({
           localDate: input.localDate,
-          reminderType: "daily_record",
+          reminderType,
           channel: "email",
           status: "created",
           message: "邮件提醒准备发送。",

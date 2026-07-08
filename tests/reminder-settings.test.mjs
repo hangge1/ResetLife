@@ -156,6 +156,73 @@ test("ReminderRunner 会发送邮件提醒并记录成功状态", async () => {
   }
 });
 
+test("ReminderRunner 同一天调整提醒时间后会再次发送邮件", async () => {
+  const { recordsRepository, reminderRepository, settingsRepository, sqlite, cleanup } = createTempRepositories();
+
+  try {
+    saveReminderRuleSettings(settingsRepository, {
+      reminderTime: "20:30",
+      inAppEnabled: false,
+      emailEnabled: true,
+      nowIso: "2026-06-26T00:00:00.000Z",
+    });
+    saveProfileSettings(settingsRepository, {
+      nickname: "",
+      heightCm: null,
+      reminderEmail: "to@example.com",
+      nowIso: "2026-06-26T00:00:00.000Z",
+    });
+    saveSmtpConfig(settingsRepository, {
+      host: "smtp.example.com",
+      port: 465,
+      username: "user",
+      password: "secret",
+      fromEmail: "me@example.com",
+      secureMode: "ssl",
+      nowIso: "2026-06-26T00:00:00.000Z",
+    });
+
+    const sentAt2030 = await runReminderCheck({
+      recordsRepository,
+      reminderRepository,
+      settingsRepository,
+      localDate: "2026-06-26",
+      currentTime: "20:35",
+      nowIso: "2026-06-26T12:35:00.000Z",
+      mailTransportFactory() {
+        return { sendMail: async () => ({ messageId: "mail-id-2030" }) };
+      },
+    });
+    saveReminderRuleSettings(settingsRepository, {
+      reminderTime: "21:00",
+      inAppEnabled: false,
+      emailEnabled: true,
+      nowIso: "2026-06-26T12:50:00.000Z",
+    });
+    const sentAt2100 = await runReminderCheck({
+      recordsRepository,
+      reminderRepository,
+      settingsRepository,
+      localDate: "2026-06-26",
+      currentTime: "21:00",
+      nowIso: "2026-06-26T13:00:00.000Z",
+      mailTransportFactory() {
+        return { sendMail: async () => ({ messageId: "mail-id-2100" }) };
+      },
+    });
+
+    assert.equal(sentAt2030.ok, true);
+    assert.equal(sentAt2100.ok, true);
+    assert.equal(sqlite.prepare("select count(*) as count from reminder_events where channel = 'email'").get().count, 2);
+    assert.deepEqual(
+      sqlite.prepare("select reminder_type as reminderType from reminder_events where channel = 'email' order by reminder_type").all(),
+      [{ reminderType: "daily_record_email_2030" }, { reminderType: "daily_record_email_2100" }],
+    );
+  } finally {
+    cleanup();
+  }
+});
+
 test("ReminderScheduler 会按启用用户执行并使用管理员 SMTP 配置", async () => {
   const { db, sqlite, cleanup } = createTempRepositories();
 

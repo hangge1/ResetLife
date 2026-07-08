@@ -71,11 +71,13 @@ export default async function SettingsPage() {
   const globalSettingsRepository = createGlobalSettingsRepository();
   const accessRepository = createAccessRepository(undefined, auth.userId);
   const reminderRepository = createReminderRepositoryForAuth(auth);
+  const userRepository = createUserRepository();
   const isAdmin = auth.role === "admin";
   const profile = getProfileSettings(repository);
   const reminderRules = getReminderRuleSettings(repository);
   const smtpConfig = isAdmin ? getSmtpConfig(globalSettingsRepository) : null;
-  const userList = isAdmin ? createUserRepository().listUsers() : null;
+  const userList = isAdmin ? userRepository.listUsers() : null;
+  const currentUser = userRepository.getUserById(auth.userId);
   const latestEmailReminder = reminderRepository.getLatestEmailReminderEvent();
   const trustedDevices = listTrustedDevices(accessRepository);
   const trendThresholds = getTrendThresholdSettings(repository);
@@ -84,7 +86,15 @@ export default async function SettingsPage() {
   const smtpConfigError = smtpConfig && !smtpConfig.ok ? (smtpConfig.fieldErrors.form ?? "SMTP 配置读取失败") : "";
   const trendThresholdError = !trendThresholds.ok ? (trendThresholds.fieldErrors.form ?? "趋势估算配置读取失败") : "";
   const initialProfileState = {
-    values: profileToFormValues(profile.ok ? profile.data : null),
+    values: {
+      ...profileToFormValues(profile.ok ? profile.data : null),
+      nickname:
+        profile.ok && profile.data.nickname
+          ? profile.data.nickname
+          : currentUser.ok
+            ? (currentUser.data?.displayName ?? "")
+            : "",
+    },
     fieldErrors: profile.ok ? {} : { form: profileError },
   };
   const initialRecipientEmailState = {

@@ -92,6 +92,24 @@ export function createReminderRepository(appDb: AppDb = getDb(), userId = DEFAUL
       }
     },
 
+    deleteReminderEventsForDateChannel(localDate: string, channel: ReminderChannel): ReminderRepositoryResult<void> {
+      try {
+        appDb
+          .delete(reminderEvents)
+          .where(
+            and(
+              eq(reminderEvents.userId, userId),
+              eq(reminderEvents.localDate, localDate),
+              eq(reminderEvents.channel, channel),
+            ),
+          )
+          .run();
+        return ok(undefined);
+      } catch {
+        return fail();
+      }
+    },
+
     createReminderEvent(input: CreateReminderEventInput): ReminderRepositoryResult<ReminderEvent> {
       try {
         const existing = appDb

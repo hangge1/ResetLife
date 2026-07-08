@@ -53,6 +53,7 @@ const sendRecipientTestEmailActionSource = readFileSync("features/settings/actio
 const recipientEmailFormSource = readFileSync("features/settings/components/recipient-email-form.tsx", "utf8");
 const saveTrendThresholdActionSource = readFileSync("features/settings/actions/save-trend-threshold.ts", "utf8");
 const saveReminderRuleActionSource = readFileSync("features/settings/actions/save-reminder-rule.ts", "utf8");
+const reminderRuleFormSource = readFileSync("features/settings/components/reminder-rule-form.tsx", "utf8");
 const saveSmtpConfigActionSource = readFileSync("features/settings/actions/save-smtp-config.ts", "utf8");
 const sendTestEmailActionSource = readFileSync("features/settings/actions/send-test-email.ts", "utf8");
 const changeAccessPasswordActionSource = readFileSync("features/access/actions/change-access-password.ts", "utf8");
@@ -383,12 +384,15 @@ test("跑步目标保存入口受保护并复用 goals service", () => {
 
 test("设置页受保护并且不直接写数据库", () => {
   assert.match(settingsPageSource, /requireUserAuthContext/);
+  assert.match(settingsPageSource, /getUserById\(auth\.userId\)/);
+  assert.match(settingsPageSource, /currentUser\.data\?\.displayName/);
   assert.doesNotMatch(settingsPageSource, /\.insert\(|\.update\(|\.delete\(/);
 });
 
 test("个人资料保存入口受保护并复用 settings service", () => {
   assert.match(saveProfileActionSource, /requireUserAuthContext/);
   assert.match(saveProfileActionSource, /createSettingsRepositoryForAuth/);
+  assert.match(saveProfileActionSource, /getProfileSettings/);
   assert.match(saveProfileActionSource, /saveProfileSettings/);
   assert.doesNotMatch(saveProfileActionSource, /\.insert\(|\.update\(|\.delete\(/);
 });
@@ -402,7 +406,7 @@ test("收件邮箱保存入口受保护并保存到当前用户设置", () => {
   assert.match(saveRecipientEmailActionSource, /createReminderRepositoryForAuth/);
   assert.match(saveRecipientEmailActionSource, /getProfileSettings/);
   assert.match(saveRecipientEmailActionSource, /saveProfileSettings/);
-  assert.match(saveRecipientEmailActionSource, /deleteReminderEvent/);
+  assert.match(saveRecipientEmailActionSource, /deleteReminderEventsForDateChannel/);
   assert.match(sendRecipientTestEmailActionSource, /requireUserAuthContext/);
   assert.match(sendRecipientTestEmailActionSource, /createGlobalSettingsRepository/);
   assert.match(sendRecipientTestEmailActionSource, /sendTestEmail/);
@@ -426,7 +430,10 @@ test("提醒规则保存入口受保护并复用 settings service", () => {
   assert.match(saveReminderRuleActionSource, /createSettingsRepositoryForAuth/);
   assert.match(saveReminderRuleActionSource, /createReminderRepositoryForAuth/);
   assert.match(saveReminderRuleActionSource, /saveReminderRuleSettings/);
-  assert.match(saveReminderRuleActionSource, /deleteReminderEvent/);
+  assert.match(saveReminderRuleActionSource, /deleteReminderEventsForDateChannel/);
+  assert.match(reminderRuleFormSource, /<select/);
+  assert.match(reminderRuleFormSource, /reminderTimeOptions/);
+  assert.doesNotMatch(reminderRuleFormSource, /<input[\s\S]*name="reminderTime"/);
   assert.doesNotMatch(saveReminderRuleActionSource, /\.insert\(|\.update\(|\.delete\(/);
 });
 

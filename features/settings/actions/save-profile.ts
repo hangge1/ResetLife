@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUserAuthContext } from "@/features/access/services/route-guards";
 import { createSettingsRepositoryForAuth } from "@/features/access/services/scoped-repositories";
 import { parseProfileFormValues } from "../services/profile-input.ts";
-import { saveProfileSettings } from "../services/profile-settings-service.ts";
+import { getProfileSettings, saveProfileSettings } from "../services/profile-settings-service.ts";
 import { profileToFormValues, type ProfileFormState } from "./profile-form-state";
 
 function formDataToValues(formData: FormData) {
@@ -20,8 +20,13 @@ export async function saveProfileAction(
   formData: FormData,
 ): Promise<ProfileFormState> {
   const auth = await requireUserAuthContext();
+  const repository = createSettingsRepositoryForAuth(auth);
+  const currentProfile = getProfileSettings(repository);
 
-  const values = formDataToValues(formData);
+  const values = {
+    ...formDataToValues(formData),
+    reminderEmail: currentProfile.ok ? currentProfile.data.reminderEmail : "",
+  };
   const parsed = parseProfileFormValues(values);
 
   if (!parsed.ok) {
@@ -31,7 +36,7 @@ export async function saveProfileAction(
     };
   }
 
-  const saved = saveProfileSettings(createSettingsRepositoryForAuth(auth), {
+  const saved = saveProfileSettings(repository, {
     ...parsed.data,
     nowIso: new Date().toISOString(),
   });
