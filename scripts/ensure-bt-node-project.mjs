@@ -213,12 +213,28 @@ def format_domains():
 
 def kill_port(port):
     command = """
-port_pids=$(ss -ltnp 2>/dev/null | sed -n 's/.*:%s .*pid=\\([0-9][0-9]*\\).*/\\1/p' | sort -u)
+port=%s
+port_pids=$(ss -ltnp 2>/dev/null | grep ":$port" | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u)
 for pid in $port_pids; do
   parent=$(ps -o ppid= -p "$pid" | tr -d ' ')
   kill "$pid" 2>/dev/null || true
   if [ -n "$parent" ] && [ "$parent" != "1" ]; then kill "$parent" 2>/dev/null || true; fi
 done
+for _ in 1 2 3 4 5; do
+  ss -ltnp 2>/dev/null | grep -q ":$port" || exit 0
+  sleep 1
+done
+port_pids=$(ss -ltnp 2>/dev/null | grep ":$port" | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u)
+for pid in $port_pids; do
+  parent=$(ps -o ppid= -p "$pid" | tr -d ' ')
+  kill -9 "$pid" 2>/dev/null || true
+  if [ -n "$parent" ] && [ "$parent" != "1" ]; then kill -9 "$parent" 2>/dev/null || true; fi
+done
+for _ in 1 2 3 4 5; do
+  ss -ltnp 2>/dev/null | grep -q ":$port" || exit 0
+  sleep 1
+done
+ss -ltnp 2>/dev/null | grep ":$port" && exit 1
 """ % int(port)
     subprocess.run(["bash", "-lc", command], check=True)
 
