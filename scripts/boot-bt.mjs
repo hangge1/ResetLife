@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,19 +43,48 @@ function getMtime(path) {
   return statSync(path).mtimeMs;
 }
 
+function readFileIfExists(path) {
+  if (!existsSync(path)) {
+    return "";
+  }
+
+  return readFileSync(path, "utf8");
+}
+
+function getDependencyFingerprint() {
+  const hash = createHash("sha256");
+  hash.update(readFileIfExists(resolve(projectRoot, "package.json")));
+  hash.update("\n---package-lock---\n");
+  hash.update(readFileIfExists(resolve(projectRoot, "package-lock.json")));
+  return hash.digest("hex");
+}
+
 function shouldInstallDependencies() {
   const nextPackage = resolve(projectRoot, "node_modules", "next", "package.json");
-  const installedLock = resolve(projectRoot, "node_modules", ".package-lock.json");
+  const marker = resolve(projectRoot, "node_modules", ".slimming-assistant-deps-hash");
   const packageJson = resolve(projectRoot, "package.json");
   const packageLock = resolve(projectRoot, "package-lock.json");
-  const installedAt = getMtime(installedLock);
 
-  return (
-    !existsSync(nextPackage) ||
-    installedAt === 0 ||
-    getMtime(packageJson) > installedAt ||
-    getMtime(packageLock) > installedAt
-  );
+  if (!existsSync(nextPackage)) {
+    return true;
+  }
+
+  if (!existsSync(marker)) {
+    const installedLock = resolve(projectRoot, "node_modules", ".package-lock.json");
+    const installedAt = getMtime(installedLock);
+    return installedAt === 0 || getMtime(packageJson) > installedAt || getMtime(packageLock) > installedAt;
+  }
+
+  return readFileSync(marker, "utf8").trim() !== getDependencyFingerprint();
+}
+
+function markDependenciesInstalled() {
+  const nodeModulesRoot = resolve(projectRoot, "node_modules");
+  if (!existsSync(nodeModulesRoot)) {
+    return;
+  }
+
+  writeFileSync(resolve(nodeModulesRoot, ".slimming-assistant-deps-hash"), `${getDependencyFingerprint()}\n`);
 }
 
 function collectFiles(root, files = []) {
@@ -145,6 +175,7 @@ validatePort();
 if (shouldInstallDependencies()) {
   console.log("Installing production dependencies...");
   run(npmCommand, ["install", "--omit=dev", "--no-audit", "--no-fund"]);
+  markDependenciesInstalled();
 } else {
   console.log("Production dependencies are already installed.");
 }

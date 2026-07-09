@@ -19,6 +19,7 @@ const btNodeVersion = process.env.DEPLOY_BT_NODE_VERSION ?? "v24.18.0";
 const btRunUser = process.env.DEPLOY_BT_RUN_USER ?? "root";
 const btPackageManager = process.env.DEPLOY_BT_PACKAGE_MANAGER ?? "npm";
 const btDomains = readDomains();
+const commandTimeoutMs = readPositiveIntegerEnv("DEPLOY_COMMAND_TIMEOUT_MS", "1800000");
 
 if (!/^\d{2,5}$/.test(appPort)) {
   throw new Error(`DEPLOY_APP_PORT must be a port number, received: ${appPort}`);
@@ -35,6 +36,21 @@ function readRequiredEnv(name, description) {
   console.error(`Set ${name} to the ${description}.`);
   console.error("Do not commit server usernames, passwords, or private keys.");
   process.exit(1);
+}
+
+function readPositiveIntegerEnv(name, defaultValue) {
+  const rawValue = process.env[name]?.trim() || defaultValue;
+
+  if (!/^\d+$/.test(rawValue)) {
+    throw new Error(`${name} must be a positive integer, received: ${rawValue}`);
+  }
+
+  const value = Number(rawValue);
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`${name} must be greater than or equal to 1, received: ${rawValue}`);
+  }
+
+  return value;
 }
 
 function readDomains() {
@@ -67,7 +83,14 @@ function normalizeDomain(value) {
 }
 
 function sshBaseArgs() {
-  const base = [];
+  const base = [
+    "-o",
+    "ConnectTimeout=20",
+    "-o",
+    "ServerAliveInterval=10",
+    "-o",
+    "ServerAliveCountMax=3",
+  ];
 
   if (identityFile) {
     base.push("-i", identityFile);
@@ -98,10 +121,15 @@ function runSshScript(remoteScript) {
     input: remoteScript,
     shell: false,
     stdio: ["pipe", "inherit", "inherit"],
+    timeout: commandTimeoutMs,
   });
 
   if (result.error) {
     console.error(result.error.message);
+  }
+
+  if (result.signal) {
+    console.error(`ensure-bt-node-project was terminated by ${result.signal}.`);
   }
 
   if (result.status !== 0) {

@@ -23,6 +23,9 @@ const dataRoot = process.env.DEPLOY_DATA_ROOT ?? `${deployRoot}/slimming-assista
 const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/slimming-assistant.sqlite`;
 const keepReleaseCount = readPositiveIntegerEnv("DEPLOY_KEEP_RELEASES", "3");
 const ensureBtProject = restartApp && process.env.DEPLOY_BT_PROJECT !== "0";
+const commandTimeoutMs = readPositiveIntegerEnv("DEPLOY_COMMAND_TIMEOUT_MS", "1800000");
+const remotePrepareTimeoutSeconds = readPositiveIntegerEnv("DEPLOY_PREPARE_TIMEOUT_SECONDS", "900");
+const remoteRestartTimeoutSeconds = readPositiveIntegerEnv("DEPLOY_RESTART_TIMEOUT_SECONDS", "120");
 
 if (!/^\d{2,5}$/.test(appPort)) {
   throw new Error(`DEPLOY_APP_PORT must be a port number, received: ${appPort}`);
@@ -87,10 +90,15 @@ function run(command, commandArgs, options = {}) {
     cwd: options.cwd ?? projectRoot,
     shell: false,
     stdio: "inherit",
+    timeout: options.timeoutMs ?? commandTimeoutMs,
   });
 
   if (result.error) {
     console.error(result.error.message);
+  }
+
+  if (result.signal) {
+    console.error(`${printable} was terminated by ${result.signal}.`);
   }
 
   if (result.status !== 0) {
@@ -129,7 +137,14 @@ function getLatestReleaseArchive() {
 }
 
 function sshBaseArgs() {
-  const base = [];
+  const base = [
+    "-o",
+    "ConnectTimeout=20",
+    "-o",
+    "ServerAliveInterval=10",
+    "-o",
+    "ServerAliveCountMax=3",
+  ];
 
   if (identityFile) {
     base.push("-i", identityFile);
@@ -143,7 +158,14 @@ function sshBaseArgs() {
 }
 
 function scpBaseArgs() {
-  const base = [];
+  const base = [
+    "-o",
+    "ConnectTimeout=20",
+    "-o",
+    "ServerAliveInterval=10",
+    "-o",
+    "ServerAliveCountMax=3",
+  ];
 
   if (identityFile) {
     base.push("-i", identityFile);
@@ -179,6 +201,7 @@ console.log(`Restart app: ${restartApp ? `yes, port ${appPort}` : "no"}`);
 console.log(`Ensure BT project: ${ensureBtProject ? "yes" : "no"}`);
 console.log(`Keep releases: ${keepReleaseCount}`);
 console.log(`Archive: ${archivePath}`);
+console.log(`Command timeout: ${commandTimeoutMs}ms`);
 
 run("ssh", [...sshBaseArgs(), remote, `mkdir -p ${shellQuote(deployRoot)}`]);
 run("scp", [...scpBaseArgs(), archivePath, `${remote}:${remoteArchive}`]);
@@ -189,25 +212,33 @@ const extractCommand = archiveName.endsWith(".tar.gz")
 
 const remoteCommand = [
   `set -e`,
+  `echo "[deploy] extract archive"`,
   extractCommand,
   `rm -f ${shellQuote(remoteArchive)}`,
+  `previous_release=$(readlink -f ${shellQuote(currentLink)} 2>/dev/null || true)`,
   `mkdir -p ${shellQuote(dataRoot)}`,
   `[ -f ${shellQuote(sqlitePath)} ] || ([ -f ${shellQuote(`${remotePackageRoot}/data/slimming-assistant.sqlite`)} ] && cp -p ${shellQuote(`${remotePackageRoot}/data/slimming-assistant.sqlite`)} ${shellQuote(sqlitePath)} || true)`,
+  `if [ -n "$previous_release" ] && [ -d "$previous_release/node_modules" ] && [ ! -e ${shellQuote(`${remotePackageRoot}/node_modules`)} ]; then echo "[deploy] reuse node_modules from $previous_release"; cp -a "$previous_release/node_modules" ${shellQuote(`${remotePackageRoot}/node_modules`)}; else echo "[deploy] node_modules reuse skipped"; fi`,
   `cd ${shellQuote(remotePackageRoot)}`,
-  `SQLITE_PATH=${shellQuote(sqlitePath)} npm run prepare:bt`,
+  `echo "[deploy] prepare runtime dependencies and database"`,
+  `SQLITE_PATH=${shellQuote(sqlitePath)} timeout ${remotePrepareTimeoutSeconds}s npm run prepare:bt`,
+  `echo "[deploy] switch current link"`,
   `ln -sfn ${shellQuote(remotePackageRoot)} ${shellQuote(currentLink)}`,
   `touch ${shellQuote(remotePackageRoot)}`,
   ...(restartApp
     ? [
+        `echo "[deploy] stop existing app on port ${appPort}"`,
         `port_pids=$(ss -ltnp 2>/dev/null | sed -n 's/.*:${appPort} .*pid=\\([0-9][0-9]*\\).*/\\1/p' | sort -u)`,
         `for pid in $port_pids; do parent=$(ps -o ppid= -p "$pid" | tr -d ' '); kill "$pid" 2>/dev/null || true; if [ -n "$parent" ] && [ "$parent" != "1" ]; then kill "$parent" 2>/dev/null || true; fi; done`,
         `sleep 2`,
+        `echo "[deploy] start app"`,
         `cd ${shellQuote(currentLink)}`,
         `(SQLITE_PATH=${shellQuote(sqlitePath)} nohup npm run ${shellQuote(startScript)} > .next-start.log 2>&1 &)`,
         `sleep 3`,
-        `(ss -ltnp 2>/dev/null | grep -q ${shellQuote(`:${appPort}`)} || (tail -80 .next-start.log; exit 1))`,
+        `timeout ${remoteRestartTimeoutSeconds}s bash -lc "until ss -ltnp 2>/dev/null | grep -q ':${appPort}'; do sleep 2; done" || (tail -80 .next-start.log; exit 1)`,
       ]
     : []),
+  `echo "[deploy] clean release archives and old directories"`,
   `find ${shellQuote(deployRoot)} -maxdepth 1 -type f \\( -name 'slimming-assistant-*.tar.gz' -o -name 'slimming-assistant-*.zip' \\) -delete`,
   `find ${shellQuote(deployRoot)} -maxdepth 1 -type d -name 'slimming-assistant-[0-9]*' -printf '%T@ %p\\n' | sort -rn | awk 'NR > ${keepReleaseCount} { sub(/^[^ ]+ /, ""); print }' | while IFS= read -r old_dir; do rm -rf -- "$old_dir"; done`,
   `echo`,

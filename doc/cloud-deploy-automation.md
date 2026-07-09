@@ -8,6 +8,7 @@
 - `DEPLOY_KEEP_RELEASES`：部署后保留的最近版本目录数量，默认 `3`
 
 脚本负责构建、上传、解压、安装生产依赖、执行 `prepare:bt`、切换当前版本、重启应用进程，并清理旧发布目录。
+部署过程会输出 `[deploy]` 阶段日志。如果某一步长时间没有新日志，应按卡点排查，不要继续重复启动新的部署命令。
 脚本会维护一个固定入口目录：
 
 ```bash
@@ -89,6 +90,9 @@ DEPLOY_APP_PORT=3000
 DEPLOY_START_SCRIPT=start:bt:3000
 DEPLOY_RESTART=1
 DEPLOY_KEEP_RELEASES=3
+DEPLOY_COMMAND_TIMEOUT_MS=1800000
+DEPLOY_PREPARE_TIMEOUT_SECONDS=900
+DEPLOY_RESTART_TIMEOUT_SECONDS=120
 ```
 
 示例：
@@ -164,6 +168,16 @@ DEPLOY_KEEP_RELEASES=1 npm run deploy:cloud
 ```
 
 不要把 `npm install`、`npm run build`、`npm run release` 放到宝塔启动命令里。
+
+## 部署耗时与防卡住约定
+
+- 自动部署应能在日志中看到明确阶段：解压、复用依赖、准备运行时、切换 current、重启、清理旧版本、修复宝塔项目。
+- 新版本会优先复用上一版本的 `node_modules`，`prepare:bt` 再根据 `package.json` 和 `package-lock.json` 指纹判断是否真的需要执行 `npm install --omit=dev`。
+- 如果依赖没有变化，`prepare:bt` 不应因为文件修改时间变化而重复安装依赖。
+- `DEPLOY_COMMAND_TIMEOUT_MS` 控制本地命令整体超时，默认 30 分钟。
+- `DEPLOY_PREPARE_TIMEOUT_SECONDS` 控制服务器 `prepare:bt` 超时，默认 15 分钟。
+- `DEPLOY_RESTART_TIMEOUT_SECONDS` 控制应用端口恢复监听的等待时间，默认 2 分钟。
+- 如果部署被中断或超时，先检查本地是否残留 `node scripts/deploy-cloud.mjs`、`ssh`、`scp` 进程，以及服务器是否已经切换 `slimming-assistant-current`，不要直接重复执行部署。
 
 ## 自动创建或修复宝塔 Node 项目
 
