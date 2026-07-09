@@ -23,6 +23,7 @@ const dataRoot = process.env.DEPLOY_DATA_ROOT ?? `${deployRoot}/slimming-assista
 const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/slimming-assistant.sqlite`;
 const keepReleaseCount = readPositiveIntegerEnv("DEPLOY_KEEP_RELEASES", "3");
 const ensureBtProject = restartApp && process.env.DEPLOY_BT_PROJECT !== "0";
+const restartInRemoteCommand = restartApp && !ensureBtProject;
 const commandTimeoutMs = readPositiveIntegerEnv("DEPLOY_COMMAND_TIMEOUT_MS", "1800000");
 const remotePrepareTimeoutSeconds = readPositiveIntegerEnv("DEPLOY_PREPARE_TIMEOUT_SECONDS", "900");
 const remoteRestartTimeoutSeconds = readPositiveIntegerEnv("DEPLOY_RESTART_TIMEOUT_SECONDS", "120");
@@ -197,7 +198,11 @@ console.log("");
 console.log(`Deploy target: ${remote}:${remotePackageRoot}`);
 console.log(`Current link: ${currentLink}`);
 console.log(`SQLite path: ${sqlitePath}`);
-console.log(`Restart app: ${restartApp ? `yes, port ${appPort}` : "no"}`);
+console.log(
+  `Restart app: ${
+    restartApp ? (ensureBtProject ? `yes, via BT project on port ${appPort}` : `yes, direct on port ${appPort}`) : "no"
+  }`,
+);
 console.log(`Ensure BT project: ${ensureBtProject ? "yes" : "no"}`);
 console.log(`Keep releases: ${keepReleaseCount}`);
 console.log(`Archive: ${archivePath}`);
@@ -225,7 +230,7 @@ const remoteCommand = [
   `echo "[deploy] switch current link"`,
   `ln -sfn ${shellQuote(remotePackageRoot)} ${shellQuote(currentLink)}`,
   `touch ${shellQuote(remotePackageRoot)}`,
-  ...(restartApp
+  ...(restartInRemoteCommand
     ? [
         `echo "[deploy] stop existing app on port ${appPort}"`,
         `port_pids=$(ss -ltnp 2>/dev/null | sed -n 's/.*:${appPort} .*pid=\\([0-9][0-9]*\\).*/\\1/p' | sort -u)`,
@@ -246,8 +251,10 @@ const remoteCommand = [
   `echo "Current link points to ${currentLink}"`,
   `echo "SQLite path is ${sqlitePath}"`,
   `echo "Kept latest ${keepReleaseCount} release directories under ${deployRoot}"`,
-  restartApp
+  restartInRemoteCommand
     ? `echo "App restarted on port ${appPort} with npm run ${startScript}"`
+    : ensureBtProject
+      ? `echo "App restart will be handled by BT project repair"`
     : `echo "App restart skipped because DEPLOY_RESTART=0"`,
 ].join(" && ");
 

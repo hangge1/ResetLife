@@ -315,9 +315,8 @@ def create_project():
 def restart_project():
     model = NodeProject()
     get = public.to_dict_obj({"project_name": config["projectName"]})
-    stop_result = model.stop_project(get)
-    if not stop_result.get("status"):
-        kill_port(config["appPort"])
+    model.stop_project(get)
+    kill_port(config["appPort"])
     start_result = model.start_project(get)
     if not start_result.get("status"):
         raise RuntimeError(json.dumps(start_result, ensure_ascii=False))
