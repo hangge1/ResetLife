@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthMotionBackground } from "@/components/layout/auth-motion-background";
+import { BeianFooter } from "@/components/layout/beian-footer";
 import type { CreateAccessPasswordState } from "@/features/access/actions/access-form-state";
 import { CreateAccessPasswordForm } from "@/features/access/components/create-access-password-form";
 import { createUserRepository } from "@/features/access/repositories/user-repository";
@@ -35,6 +36,7 @@ export default async function CreateAccessPasswordPage({ searchParams }: CreateA
   return (
     <main className="auth-page">
       <AuthMotionBackground />
+      <div className="auth-card-shell">
       <section className="auth-card">
         <div className="auth-card__header">
           <p className="auth-brand">跑步瘦身助手</p>
@@ -45,6 +47,8 @@ export default async function CreateAccessPasswordPage({ searchParams }: CreateA
         </div>
         <CreateAccessPasswordForm fieldErrors={fieldErrors} />
       </section>
+      </div>
+      <BeianFooter className="auth-footer" />
     </main>
   );
 }

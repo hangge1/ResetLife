@@ -1,8 +1,8 @@
 ﻿import Link from "next/link";
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { Activity, CalendarCheck, Flag, Route, Scale } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { BeianFooter } from "@/components/layout/beian-footer";
 import { GuestModeNotice } from "@/components/layout/guest-mode-notice";
 import { LoginWelcomeToast } from "@/components/layout/login-welcome-toast";
 import { OnboardingGuide } from "@/components/onboarding/onboarding-guide";
@@ -338,35 +338,7 @@ export default async function Home({ searchParams }: HomeProps) {
           </section>
         </div>
 
-        <footer className="home-footer">
-          <p className="m-0">
-            Copyright © 2026 张治航
-          </p>
-          <p className="m-0 mt-2">
-            经营性网站备案信息：
-            <a href="https://beian.miit.gov.cn/" rel="noreferrer" target="_blank">
-              苏ICP备2026044129号
-            </a>
-          </p>
-          <p className="m-0 mt-2">
-            <a
-              className="home-footer__police-beian"
-              href="https://beian.mps.gov.cn/#/query/webSearch?code=32011202001787"
-              rel="noreferrer"
-              target="_blank"
-            >
-              <Image
-                alt=""
-                aria-hidden="true"
-                className="home-footer__beian-icon"
-                height={18}
-                src="/beian-police.png"
-                width={18}
-              />
-              <span>苏公网安备32011202001787号</span>
-            </a>
-          </p>
-        </footer>
+        <BeianFooter className="home-footer" />
       </main>
     </AppShell>
   );

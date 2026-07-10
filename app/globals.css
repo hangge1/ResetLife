@@ -443,6 +443,8 @@ textarea:hover {
   position: relative;
   min-height: 100vh;
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 18px;
   place-items: center;
   overflow: hidden;
   background:
@@ -567,10 +569,16 @@ textarea:hover {
   animation: auth-runner-pulse 3.8s ease-in-out infinite;
 }
 
-.auth-card {
+.auth-card-shell {
   position: relative;
   z-index: 1;
   width: min(100%, 480px);
+  display: grid;
+  place-items: center;
+}
+
+.auth-card {
+  width: 100%;
   border: 1px solid rgba(47, 109, 179, 0.18);
   border-radius: 8px;
   background: rgba(247, 249, 255, 0.88);
@@ -579,6 +587,24 @@ textarea:hover {
     0 28px 90px rgba(4, 30, 66, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(18px);
+}
+
+.auth-footer {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 720px);
+  color: var(--ink-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.auth-footer a {
+  font-weight: 700;
+  color: var(--ink-secondary);
+}
+
+.auth-footer a:hover {
+  color: var(--primary);
 }
 
 .auth-card__header {
@@ -1314,7 +1340,7 @@ textarea:hover {
   color: var(--primary);
 }
 
-.home-footer__police-beian {
+.site-footer__police-beian {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1322,7 +1348,7 @@ textarea:hover {
   line-height: 1.4;
 }
 
-.home-footer__beian-icon {
+.site-footer__beian-icon {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;

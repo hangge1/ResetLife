@@ -17,6 +17,7 @@ const navigationSource = readFileSync("lib/navigation.ts", "utf8");
 const layoutSource = readFileSync("app/layout.tsx", "utf8");
 const pageSource = readFileSync("app/page.tsx", "utf8");
 const appShellSource = readFileSync("components/layout/app-shell.tsx", "utf8");
+const beianFooterSource = readFileSync("components/layout/beian-footer.tsx", "utf8");
 const topNavSource = readFileSync("components/layout/top-nav.tsx", "utf8");
 const logoutRouteSource = readFileSync("app/access/logout/route.ts", "utf8");
 const verifySubmitRouteSource = readFileSync("app/access/verify/submit/route.ts", "utf8");
@@ -176,11 +177,15 @@ test("首页是应用仪表盘，不是营销页面", () => {
   assert.doesNotMatch(pageSource, /landing|hero|pricing|signup/i);
 });
 
-test("home footer shows police beian icon and number", () => {
-  assert.match(pageSource, /beian\.mps\.gov\.cn\/#\/query\/webSearch\?code=32011202001787/);
-  assert.match(pageSource, /32011202001787/);
-  assert.match(pageSource, /\/beian-police\.png/);
-  assert.match(globalsSource, /\.home-footer__police-beian/);
+test("public pages show beian footer before and after login", () => {
+  assert.match(pageSource, /BeianFooter/);
+  assert.match(verifyAccessPageSource, /BeianFooter/);
+  assert.match(createAccessPageSource, /BeianFooter/);
+  assert.match(beianFooterSource, /beian\.mps\.gov\.cn\/#\/query\/webSearch\?code=32011202001787/);
+  assert.match(beianFooterSource, /32011202001787/);
+  assert.match(beianFooterSource, /\/beian-police\.png/);
+  assert.match(globalsSource, /\.site-footer__police-beian/);
+  assert.match(globalsSource, /\.auth-footer/);
   assert.ok(existsSync("public/beian-police.png"));
 });
 
