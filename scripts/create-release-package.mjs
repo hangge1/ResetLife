@@ -24,6 +24,7 @@ const includeEntries = [
   "db",
   "features",
   "lib",
+  "public",
   "scripts",
   ".next",
   "components.json",

@@ -1314,6 +1314,21 @@ textarea:hover {
   color: var(--primary);
 }
 
+.home-footer__police-beian {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.home-footer__beian-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
 .card {
   background: var(--surface-panel);
   border: 1px solid var(--border-soft);

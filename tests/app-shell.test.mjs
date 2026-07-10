@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,6 +31,7 @@ const pageTurnControlsSource = readFileSync("components/layout/page-turn-control
 const buttonSource = readFileSync("components/ui/button.tsx", "utf8");
 const globalsSource = readFileSync("app/globals.css", "utf8");
 const uiScreenshotSource = readFileSync("scripts/ui-screenshot.mjs", "utf8");
+const createReleasePackageSource = readFileSync("scripts/create-release-package.mjs", "utf8");
 const deployCloudSource = readFileSync("scripts/deploy-cloud.mjs", "utf8");
 const ensureBtNodeProjectSource = readFileSync("scripts/ensure-bt-node-project.mjs", "utf8");
 const startBtSource = readFileSync("scripts/start-bt.mjs", "utf8");
@@ -175,6 +176,14 @@ test("首页是应用仪表盘，不是营销页面", () => {
   assert.doesNotMatch(pageSource, /landing|hero|pricing|signup/i);
 });
 
+test("home footer shows police beian icon and number", () => {
+  assert.match(pageSource, /beian\.mps\.gov\.cn\/#\/query\/webSearch\?code=32011202001787/);
+  assert.match(pageSource, /32011202001787/);
+  assert.match(pageSource, /\/beian-police\.png/);
+  assert.match(globalsSource, /\.home-footer__police-beian/);
+  assert.ok(existsSync("public/beian-police.png"));
+});
+
 test("使用引导不会把下一步点击透传给页面翻页区", () => {
   assert.match(onboardingGuideSource, /createPortal/);
   assert.match(onboardingGuideSource, /document\.body/);
@@ -305,6 +314,10 @@ test("cloud deploy cleans old release directories after switching current", () =
   assert.match(deployCloudSource, /slimming-assistant-\*\.tar\.gz/);
   assert.match(deployCloudSource, /slimming-assistant-\[0-9\]\*/);
   assert.match(deployCloudSource, /rm -rf -- "\$old_dir"/);
+});
+
+test("release package includes public static assets", () => {
+  assert.match(createReleasePackageSource, /"public"/);
 });
 
 test("cloud deploy can recreate the Baota Node project", () => {

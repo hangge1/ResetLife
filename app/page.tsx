@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { Activity, CalendarCheck, Flag, Route, Scale } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
@@ -347,7 +348,24 @@ export default async function Home({ searchParams }: HomeProps) {
               苏ICP备2026044129号
             </a>
           </p>
-          <p className="m-0 mt-2">本网站暂未申请公安机关互联网安全备案。</p>
+          <p className="m-0 mt-2">
+            <a
+              className="home-footer__police-beian"
+              href="https://beian.mps.gov.cn/#/query/webSearch?code=32011202001787"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <Image
+                alt=""
+                aria-hidden="true"
+                className="home-footer__beian-icon"
+                height={18}
+                src="/beian-police.png"
+                width={18}
+              />
+              <span>苏公网安备32011202001787号</span>
+            </a>
+          </p>
         </footer>
       </main>
     </AppShell>
