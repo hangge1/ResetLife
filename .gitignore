@@ -1,6 +1,8 @@
 node_modules/
 .next/
+.astro/
 .next-dev-logs/
+.dev-logs/
 .ui-screenshots/
 .agents/
 _bmad/config.user.toml
@@ -12,6 +14,7 @@ coverage/
 .env.*
 !.env.example
 /data/
+/server/data/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

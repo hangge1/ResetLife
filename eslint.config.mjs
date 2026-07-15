@@ -1,15 +1,49 @@
+import js from "@eslint/js";
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import tseslint from "typescript-eslint";
+
+const globals = {
+  AbortController: "readonly",
+  console: "readonly",
+  document: "readonly",
+  fetch: "readonly",
+  FormData: "readonly",
+  localStorage: "readonly",
+  location: "readonly",
+  navigator: "readonly",
+  process: "readonly",
+  Response: "readonly",
+  setTimeout: "readonly",
+  URL: "readonly",
+  URLSearchParams: "readonly",
+  window: "readonly",
+};
 
 export default defineConfig([
-  ...nextVitals,
-  ...nextTs,
   globalIgnores([
     ".next/**",
+    "dist/**",
     "node_modules/**",
+    "web/.astro/**",
+    "web/dist/**",
+    "web/node_modules/**",
     "_bmad/**",
     "_bmad-output/**",
-    "docs/**"
-  ])
+    "app/**",
+    "components/**",
+    "db/**",
+    "features/**",
+    "lib/**",
+    "next-env.d.ts",
+  ]),
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    files: ["scripts/**/*.mjs", "tests/go-astro-default.test.mjs", "web/src/**/*.ts"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals,
+    },
+  },
 ]);

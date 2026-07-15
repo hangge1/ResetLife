@@ -1,116 +1,133 @@
-# 部署手册
+# 宝塔部署手册
 
-## 宝塔生产部署
+当前生产部署使用 Astro 静态文件 + Go API，不需要在服务器上运行 Node 后端。
 
-生产环境推荐使用本地或 CI 生成的发布包。服务器只负责安装生产依赖、迁移数据库和启动长运行 Node.js 服务。
+## 1. 本地生成发布包
 
 ```bash
 npm install
+npm --prefix web install
 npm run release
 ```
 
-上传 `dist/releases/*.tar.gz` 到服务器后解压：
-
-```bash
-mkdir -p /www/wwwroot/slimming-assistant
-tar -xzf slimming-assistant-*.tar.gz -C /www/wwwroot/slimming-assistant --strip-components=1
-cd /www/wwwroot/slimming-assistant
-```
-
-首次部署或更新依赖后，在 SSH 里执行一次：
-
-```bash
-npm run prepare:bt
-```
-
-宝塔项目启动命令只保留：
-
-```bash
-npm run start:bt:3000
-```
-
-不要把 `npm install`、`npm run build`、`npm run release` 或 `npm run prepare:bt` 放进宝塔启动命令。宝塔会在重启、守护拉起或开机时重复执行启动命令，小内存服务器容易因此被依赖安装或构建打满。
-
-## 反向代理请求头
-
-Next.js Server Actions 会校验浏览器 `Origin` 与 `Host` / `X-Forwarded-Host` 是否一致。HTTPS 反代常见问题是代理把默认端口带进 `X-Forwarded-Host`，例如：
+发布包生成在：
 
 ```text
-Origin: https://www.hangge.xyz
-X-Forwarded-Host: www.hangge.xyz:443
+dist/releases/slimming-assistant-go-astro-<version>-<timestamp>.tar.gz
 ```
 
-这种请求会被 Next.js 判定为无效 Server Actions 请求。宝塔 Nginx 反向代理建议固定为：
+## 2. 服务器目录建议
+
+```text
+/www/wwwroot/slimming-assistant/
+  current -> releases/<version>
+  releases/
+  data/app.sqlite
+```
+
+## 3. 手动部署
+
+```bash
+mkdir -p /www/wwwroot/slimming-assistant/releases
+tar -xzf slimming-assistant-go-astro-*.tar.gz -C /www/wwwroot/slimming-assistant/releases
+ln -sfn /www/wwwroot/slimming-assistant/releases/<解压后的目录名> /www/wwwroot/slimming-assistant/current
+cd /www/wwwroot/slimming-assistant/current
+cp .env.example .env
+```
+
+编辑 `.env`：
+
+```bash
+API_ADDR=127.0.0.1:8080
+DATA_DIR=/www/wwwroot/slimming-assistant/data
+SQLITE_PATH=/www/wwwroot/slimming-assistant/data/app.sqlite
+INTERNAL_REMINDER_TOKEN=请替换为随机长字符串
+REMINDER_TIME_ZONE=Asia/Shanghai
+```
+
+启动或重启 Go API：
+
+```bash
+chmod +x api/slimmingassistant-api scripts/*.sh
+./scripts/restart-api.sh
+curl http://127.0.0.1:8080/api/healthz
+```
+
+## 4. 宝塔站点配置
+
+宝塔网站根目录指向：
+
+```text
+/www/wwwroot/slimming-assistant/current/public
+```
+
+Nginx 增加 `/api/` 反向代理：
 
 ```nginx
-proxy_set_header Host $host;
-proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-Port $server_port;
+location /api/ {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+location / {
+    try_files $uri $uri/ /index.html;
+}
 ```
 
-项目的 `npm run start:bt` 入口也会在请求进入 Next.js 前规范化默认端口，把 `www.hangge.xyz:443` 转为 `www.hangge.xyz`，把 `www.hangge.xyz:80` 转为 `www.hangge.xyz`，但会保留 `www.hangge.xyz:3000` 这类真实非默认端口。
+如果宝塔启用 HTTPS，保持上述 `X-Forwarded-Proto` 即可。
 
-## 多域名配置
+## 5. 自动部署
 
-如果同一应用允许多个公网域名访问，在构建发布包前设置：
+本地配置 SSH 环境变量后执行：
 
 ```bash
-SERVER_ACTION_ALLOWED_ORIGINS=www.hangge.xyz,hangge.xyz npm run release
+DEPLOY_HOST=your.server DEPLOY_USER=root npm run deploy:cloud
 ```
 
-也可以使用这些环境变量之一，项目会自动解析并写入 Next.js Server Actions 的可信来源：
-
-```text
-SERVER_ACTION_ALLOWED_ORIGINS
-APP_ORIGIN
-APP_URL
-SITE_ORIGIN
-SITE_URL
-PUBLIC_ORIGIN
-PUBLIC_URL
-NEXT_PUBLIC_APP_ORIGIN
-NEXT_PUBLIC_APP_URL
-NEXT_PUBLIC_SITE_ORIGIN
-NEXT_PUBLIC_SITE_URL
-BT_PUBLIC_HOST
-```
-
-变量值可以是域名、完整 URL 或逗号分隔列表。默认端口 `:80`、`:443` 会被自动去掉。
-
-## 排障检查
-
-本机服务检查：
+常用可选变量：
 
 ```bash
-curl http://127.0.0.1:3000
-ss -lntp | grep :3000
+DEPLOY_PORT=22
+DEPLOY_IDENTITY_FILE=~/.ssh/id_rsa
+DEPLOY_APP_ROOT=/www/wwwroot/slimming-assistant
+DEPLOY_APP_PORT=8080
+DEPLOY_INTERNAL_REMINDER_TOKEN=随机长字符串
+DEPLOY_KEEP_RELEASES=3
 ```
 
-模拟宝塔 HTTPS 反代请求头：
+自动部署脚本会：
+
+- 生成或复用最新发布包
+- 上传并解压到 `releases/`
+- 复用上一版 `.env`，或生成新的 `.env`
+- 切换 `current` 软链
+- 重启 Go API
+- 检查 `/api/healthz`
+- 清理旧发布包
+
+## 6. 排查
+
+检查 API：
 
 ```bash
-curl -H 'X-Forwarded-Host: www.hangge.xyz:443' \
-  -H 'X-Forwarded-Proto: https' \
-  http://127.0.0.1:3000
+curl http://127.0.0.1:8080/api/healthz
+tail -80 /www/wwwroot/slimming-assistant/current/api/api.log
 ```
 
-如果页面能打开但提交目标、记录或设置时报：
-
-```text
-x-forwarded-host header with value ... does not match origin header ...
-Invalid Server Actions request
-```
-
-优先检查：
-
-- 宝塔 Nginx 是否使用了上面的 `proxy_set_header` 配置。
-- 宝塔启动命令是否仍是 `npm run start:bt:3000`，没有绕过 `scripts/start-bt.mjs`。
-- 发布包是否是最新构建，服务器是否已重启 Node 进程。
-- 多域名场景是否设置了 `SERVER_ACTION_ALLOWED_ORIGINS` 并重新执行 `npm run release`。
-
-每次修改部署脚本或反代头处理后，本地必须运行：
+检查端口：
 
 ```bash
-npm run check
+ss -lntp | grep :8080
 ```
+
+停止 API：
+
+```bash
+cd /www/wwwroot/slimming-assistant/current
+./scripts/stop-api.sh
+```
+
+如果静态页面能打开但接口失败，优先检查宝塔 Nginx 的 `/api/` 反向代理配置。

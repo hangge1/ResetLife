@@ -213,3 +213,38 @@ npm run typecheck
 npm test
 npm run ui:screenshot
 ```
+
+## 2026-07-15 个人站切换、Go/Astro 迁移与遗留文件清理
+
+### 调整背景
+
+本轮调整来自站点定位变化和后续部署维护要求：根路径需要从“跑步瘦身助手”改为个人 Web 站点首页，跑步瘦身助手降级为项目板块中的独立应用；后端运行时从 Node/Next Server Actions 迁移到 Go API，方便后续在云服务器和宝塔环境中部署、监控和维护。
+
+### 已完成调整
+
+- 根首页切换为个人站结构，包含认知、技术、项目三个板块；跑步瘦身助手作为项目入口保留。
+- 前端切换为 Astro + Vue，跑步瘦身助手入口位于 `/app/slimming`，项目详情位于 `/projects/slimming`。
+- 后端切换为 Go API + SQLite，覆盖登录、用户管理、健康记录、跑步记录、目标、历史、设置、提醒和邮件配置。
+- 默认开发、构建、启动、发布脚本切换到 Go/Astro 链路：`dev-go-astro`、`start-go-astro`、`create-go-astro-release-package`。
+- 宝塔发布包改为 Go 二进制 + Astro 静态站点，生产入口由 Go 服务托管静态文件并提供 `/api/*`。
+- 跑步瘦身助手恢复旧版导航行为：默认进入首页，点击首页、打卡、数据、历史、设置时只显示对应分区。
+- 登录页恢复独立全屏运动背景和居中登录卡片；登录后恢复应用动态背景、首页可交互卡片、左右翻页热区和统一按钮视觉。
+- 默认管理员由 Go 启动时保证存在，当前默认账号为 `admin / admin123456`。
+- 清理重构前遗留的旧 Next/React/Drizzle 源码、shadcn 配置、根 `public/` 静态目录、旧 Next 构建产物、旧截图产物和临时旧 CSS 导出文件。
+- `.gitignore` 增加 `.dev-logs/` 与 `server/data/`，避免开发日志和本地 SQLite 数据库进入版本库。
+
+### 防回归约定
+
+- 不要恢复 Next.js App Router、React Server Actions、Drizzle、根 `public/` 或 Node 后端启动链路。
+- 不要把根路径 `/` 改回跑步瘦身助手；跑步助手应用入口保持 `/app/slimming`。
+- 跑步助手页面必须保持分区隔离，不能把首页、打卡、数据、历史、设置的全部卡片一次性展示。
+- 登录页和应用页的运动背景、首页卡片交互、翻页热区和统一按钮视觉属于核心体验，不应在后续样式调整中移除。
+- 本地运行数据只放在 `server/data/`，发布产物只放在 `dist/` 或发布包内，不进入版本库。
+
+### 验证记录
+
+```text
+npm run check
+GET http://127.0.0.1:4321/app/slimming/ => 200
+POST http://127.0.0.1:8080/api/auth/login admin/admin123456 => authenticated=true
+```
