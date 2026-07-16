@@ -19,7 +19,7 @@
   "exclude": [
     "dist",
     "node_modules",
-    "web/dist",
-    "web/node_modules"
+    "frontend/dist",
+    "frontend/node_modules"
   ]
 }

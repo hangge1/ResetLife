@@ -1,0 +1,200 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { actionProblems, evidenceOptions, minimumActions, projects, reviewOptions } from "@/data/site";
+---
+
+<SiteLayout title="行为重构 | 复位" description="你先从选项里选一个今天能做的小动作，我们再用证据和复盘把它闭环。">
+  <SiteHeader />
+  <main class="tool-page">
+    <section class="tool-hero">
+      <p class="eyebrow">Action</p>
+      <h1>行为重构</h1>
+      <p>如果你现在动不起来，我们不让你凭空设计计划。你先从模板里选一个今天能开始的小动作。</p>
+    </section>
+
+    <section class="tool-grid">
+      <form class="tool-panel" id="action-form">
+        <div class="panel-heading">
+          <h2>选择一个今日最小行动</h2>
+          <p>动作要小，证据要清楚，复盘要简单。我们先完成一次闭环，再考虑扩大。</p>
+        </div>
+
+        <fieldset>
+          <legend>你今天主要卡在哪类问题？</legend>
+          <div class="choice-grid">
+            {actionProblems.map((problem) => (
+              <label class="choice-card">
+                <input type="radio" name="problem" value={problem} />
+                <span>{problem}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果你的问题不在这里，可以自己写
+            <input name="customProblem" placeholder="例如：我不是不想做，而是一想到开始就很烦" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>你今天先做哪个最小行动？</legend>
+          <div class="choice-grid">
+            {minimumActions.map((action) => (
+              <label class="choice-card">
+                <input type="radio" name="actionName" value={action} />
+                <span>{action}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            也可以写一个更适合你今天的最小行动
+            <input name="customActionName" placeholder="例如：只打开文档，把标题改好就停" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>做完以后，你准备用什么证明它完成了？</legend>
+          <div class="choice-grid">
+            {evidenceOptions.map((evidence) => (
+              <label class="choice-card">
+                <input type="radio" name="evidence" value={evidence} />
+                <span>{evidence}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            你也可以写自己的完成证据
+            <input name="customEvidence" placeholder="例如：发给自己的语音、桌面前后对比图" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>如果现在做复盘，哪句话更接近你的情况？</legend>
+          <div class="choice-grid">
+            {reviewOptions.map((review) => (
+              <label class="choice-card">
+                <input type="radio" name="review" value={review} />
+                <span>{review}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果你想用自己的话复盘，也可以写
+            <input name="customReview" placeholder="例如：我做了一半，但已经比完全逃避好" />
+          </label>
+        </fieldset>
+
+        <div class="field-row">
+          <label>
+            这个动作 30 分钟内能完成吗？
+            <select name="under30">
+              <option value="能">能</option>
+              <option value="需要再缩小">需要再缩小</option>
+            </select>
+          </label>
+          <label>
+            可选截止时间
+            <input name="deadline" type="time" />
+          </label>
+        </div>
+
+        <label>
+          可选补充
+          <textarea name="note" rows="3" placeholder="如果你想补一句阻力或下一步，可以写在这里。"></textarea>
+        </label>
+
+        <button class="button button-primary" type="submit">保存行动与复盘</button>
+      </form>
+
+      <aside class="tool-panel">
+        <div class="panel-heading">
+          <h2>如果你想先从身体开始</h2>
+          <p>你可以进入跑步瘦身助手，把每天的身体状态和跑步行动记录下来。</p>
+        </div>
+        <div class="tool-link-list">
+          {projects.map((project) => (
+            <a class="tool-link-card" href={project.appHref}>
+              <img src={project.image} alt={`${project.title} 预览`} loading="lazy" />
+              <span>{project.status}</span>
+              <strong>{project.title}</strong>
+              <p>{project.description}</p>
+            </a>
+          ))}
+        </div>
+        <div class="saved-list" id="action-list"></div>
+      </aside>
+    </section>
+  </main>
+  <SiteFooter />
+</SiteLayout>
+
+<script is:inline>
+  const storageKey = "resetlife:action-tasks";
+  const form = document.querySelector("#action-form");
+  const list = document.querySelector("#action-list");
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function readItems() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function writeItems(items) {
+    localStorage.setItem(storageKey, JSON.stringify(items.slice(0, 30)));
+  }
+
+  function renderList() {
+    const items = readItems();
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-note">还没有行动记录。</p>';
+      return;
+    }
+    list.innerHTML = items
+      .map(
+        (item) => `
+          <article class="saved-item">
+            <span>${escapeHtml(item.date)} · ${escapeHtml(item.under30 || "未判断")}</span>
+            <strong>${escapeHtml(item.actionName)}</strong>
+            <p>问题：${escapeHtml(item.problem)}</p>
+            <p>证据：${escapeHtml(item.evidence || "暂未选择")}</p>
+            ${item.review ? `<p>复盘：${escapeHtml(item.review)}</p>` : ""}
+          </article>
+        `,
+      )
+      .join("");
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const item = {
+      problem: String(data.get("customProblem") || data.get("problem") || "").trim(),
+      actionName: String(data.get("customActionName") || data.get("actionName") || "").trim(),
+      evidence: String(data.get("customEvidence") || data.get("evidence") || "").trim(),
+      review: String(data.get("customReview") || data.get("review") || "").trim(),
+      under30: String(data.get("under30") || "").trim(),
+      deadline: String(data.get("deadline") || "").trim(),
+      note: String(data.get("note") || "").trim(),
+    };
+    item.date = new Date().toLocaleString("zh-CN", { hour12: false });
+    if (!item.problem || !item.actionName) return;
+    writeItems([item, ...readItems()]);
+    form.reset();
+    renderList();
+  });
+
+  renderList();
+</script>

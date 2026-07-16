@@ -9,18 +9,22 @@ const startGoAstroSource = readFileSync("scripts/start-go-astro.mjs", "utf8");
 const devGoAstroSource = readFileSync("scripts/dev-go-astro.mjs", "utf8");
 const deployCloudSource = readFileSync("scripts/deploy-cloud.mjs", "utf8");
 const releaseSource = readFileSync("scripts/create-go-astro-release-package.mjs", "utf8");
-const apiConfigSource = readFileSync("server/internal/config/config.go", "utf8");
-const routerSource = readFileSync("server/internal/httpserver/router.go", "utf8");
-const mainSource = readFileSync("server/cmd/api/main.go", "utf8");
-const astroConfigSource = readFileSync("web/astro.config.mjs", "utf8");
-const siteSource = readFileSync("web/src/data/site.ts", "utf8");
-const homePageSource = readFileSync("web/src/pages/index.astro", "utf8");
-const projectPageSource = readFileSync("web/src/pages/projects/slimming.astro", "utf8");
-const slimmingPageSource = readFileSync("web/src/pages/app/slimming.astro", "utf8");
-const apiClientSource = readFileSync("web/src/lib/api.ts", "utf8");
-const slimmingShellSource = readFileSync("web/src/components/slimming/SlimmingAppShell.vue", "utf8");
+const apiConfigSource = readFileSync("backend/internal/config/config.go", "utf8");
+const routerSource = readFileSync("backend/internal/httpserver/router.go", "utf8");
+const mainSource = readFileSync("backend/cmd/api/main.go", "utf8");
+const astroConfigSource = readFileSync("frontend/astro.config.mjs", "utf8");
+const siteSource = readFileSync("frontend/src/data/site.ts", "utf8");
+const homePageSource = readFileSync("frontend/src/pages/index.astro", "utf8");
+const diagnosisPageSource = readFileSync("frontend/src/pages/diagnosis.astro", "utf8");
+const planPageSource = readFileSync("frontend/src/pages/plan.astro", "utf8");
+const reviewPageSource = readFileSync("frontend/src/pages/review.astro", "utf8");
+const projectPageSource = readFileSync("frontend/src/pages/projects/slimming.astro", "utf8");
+const slimmingPageSource = readFileSync("frontend/src/pages/app/slimming.astro", "utf8");
+const apiClientSource = readFileSync("frontend/src/lib/api.ts", "utf8");
+const slimmingShellSource = readFileSync("frontend/src/components/slimming/SlimmingAppShell.vue", "utf8");
 const readmeSource = readFileSync("README.md", "utf8");
 const agentSource = readFileSync("AGENT.md", "utf8");
+const productConstraintsSource = readFileSync("doc/product-constraints.md", "utf8");
 
 function listFiles(root) {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
@@ -31,13 +35,13 @@ function listFiles(root) {
 
 test("default npm scripts and root dependencies are Go and Astro only", () => {
   assert.equal(packageSource.scripts.dev, "node scripts/dev-go-astro.mjs");
-  assert.equal(packageSource.scripts.build, "npm run web:build && npm run api:build");
+  assert.equal(packageSource.scripts.build, "npm run frontend:build && npm run backend:build");
   assert.equal(packageSource.scripts.start, "node scripts/start-go-astro.mjs");
   assert.equal(packageSource.scripts.release, "node scripts/create-go-astro-release-package.mjs");
-  assert.equal(packageSource.scripts.typecheck, "npm run web:check");
+  assert.equal(packageSource.scripts.typecheck, "npm run frontend:check");
   assert.equal(packageSource.scripts.test, "node --test tests/go-astro-default.test.mjs");
-  assert.equal(packageSource.scripts.lint, "eslint scripts/create-go-astro-release-package.mjs scripts/deploy-cloud.mjs scripts/dev-go-astro.mjs scripts/start-go-astro.mjs tests/go-astro-default.test.mjs web/src/**/*.ts");
-  assert.equal(packageSource.scripts.check, "npm run lint && npm run typecheck && npm test && npm run api:test");
+  assert.equal(packageSource.scripts.lint, "eslint scripts/create-go-astro-release-package.mjs scripts/deploy-cloud.mjs scripts/dev-go-astro.mjs scripts/start-go-astro.mjs tests/go-astro-default.test.mjs frontend/src/**/*.ts");
+  assert.equal(packageSource.scripts.check, "npm run lint && npm run typecheck && npm test && npm run backend:test");
 
   for (const name of ["dev", "build", "start", "release", "typecheck", "test", "lint", "check"]) {
     assert.doesNotMatch(packageSource.scripts[name], /next|start-bt|create-release-package/);
@@ -63,21 +67,33 @@ test("Go server can be the production entrypoint for Astro static files and APIs
   assert.match(routerSource, /http\.ServeFile\(w, r, candidate\)/);
   assert.match(routerSource, /strings\.HasPrefix\(cleanPath\(r\.URL\.Path\), "\/api"\)/);
   assert.match(startGoAstroSource, /STATIC_DIR/);
-  assert.match(startGoAstroSource, /web", "dist"/);
+  assert.match(startGoAstroSource, /frontend", "dist"/);
   assert.match(startGoAstroSource, /\["run", "\.\/cmd\/api"\]/);
   assert.match(devGoAstroSource, /spawnProcess\("api", resolveGoCommand\(\), \["run", "\.\/cmd\/api"\]/);
-  assert.match(devGoAstroSource, /"--prefix", "web", "run", "dev"/);
+  assert.match(devGoAstroSource, /"--prefix", "frontend", "run", "dev"/);
 });
 
-test("Astro public site owns the homepage and keeps slimming assistant as a project app", () => {
+test("Astro public site owns ResetLife MVP and keeps slimming assistant as an action tool", () => {
   assert.match(astroConfigSource, /@astrojs\/vue/);
   assert.match(astroConfigSource, /output:\s*"static"/);
-  assert.match(homePageSource, /认知板块|cognition/i);
-  assert.match(homePageSource, /技术板块|technology/i);
-  assert.match(homePageSource, /项目板块|projects/i);
+  assert.match(homePageSource, /复位/);
+  assert.match(homePageSource, /重建人生系统/);
+  assert.match(siteSource, /心理重建/);
+  assert.match(siteSource, /认知重塑/);
+  assert.match(siteSource, /行为重构/);
+  assert.match(siteSource, /复位方案/);
+  assert.match(homePageSource, /问诊/);
   assert.match(siteSource, /\/projects\/slimming/);
   assert.match(siteSource, /\/projects\/slimming-home-preview\.png/);
-  assert.match(homePageSource, /project-card-image/);
+  assert.match(siteSource, /行为重构工具/);
+  assert.match(diagnosisPageSource, /data-dialogue-card/);
+  assert.match(diagnosisPageSource, /第 1 轮/);
+  assert.match(diagnosisPageSource, /resetlife:latest-plan/);
+  assert.match(diagnosisPageSource, /保存这次问诊/);
+  assert.match(planPageSource, /复位方案/);
+  assert.match(planPageSource, /三大修复方向/);
+  assert.match(reviewPageSource, /复盘复诊/);
+  assert.match(projectPageSource, /从身体秩序开始/);
   assert.match(projectPageSource, /detail-backdrop/);
   assert.match(projectPageSource, /\/app\/slimming/);
   assert.match(slimmingPageSource, /SlimmingAppShell/);
@@ -110,7 +126,7 @@ test("Vue slimming app talks only to Go API endpoints for migrated capabilities"
 });
 
 test("Go and Astro release package is the default Baota artifact", () => {
-  assert.match(releaseSource, /resolve\(projectRoot, "web", "dist"\)/);
+  assert.match(releaseSource, /resolve\(projectRoot, "frontend", "dist"\)/);
   assert.match(releaseSource, /go", \["test", "\.\/\.\.\."\]/);
   assert.match(releaseSource, /go", \["build"/);
   assert.match(releaseSource, /apiBinaryName/);
@@ -118,11 +134,18 @@ test("Go and Astro release package is the default Baota artifact", () => {
   assert.match(releaseSource, /README_DEPLOY\.md/);
   assert.match(releaseSource, /X-Internal-Reminder-Token/);
   assert.match(readmeSource, /Astro\/Vue 前端 \+ Go API 后端/);
+  assert.match(readmeSource, /\/plan/);
+  assert.match(readmeSource, /\/review/);
+  assert.match(readmeSource, /doc\/product-constraints\.md/);
+  assert.match(agentSource, /doc\/product-constraints\.md/);
+  assert.match(productConstraintsSource, /选择题/);
+  assert.match(productConstraintsSource, /卡片式分步对话/);
+  assert.match(productConstraintsSource, /面对面对话/);
   assert.match(agentSource, /默认开发、构建、启动、发布路径已经切到 Astro\/Vue \+ Go/);
 });
 
-test("web and server trees do not import Next runtime APIs", () => {
-  for (const file of [...listFiles("web/src"), ...listFiles("server")]) {
+test("frontend and backend trees do not import Next runtime APIs", () => {
+  for (const file of [...listFiles("frontend/src"), ...listFiles("backend")]) {
     if (!/\.(astro|vue|ts|go|mjs|js)$/.test(file)) continue;
     const source = readFileSync(file, "utf8");
     assert.doesNotMatch(source, /from ["']next(?:\/|["'])|next\/navigation|next\/server|next\/cache/, file);

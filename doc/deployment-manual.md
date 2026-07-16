@@ -6,7 +6,7 @@
 
 ```bash
 npm install
-npm --prefix web install
+npm --prefix frontend install
 npm run release
 ```
 

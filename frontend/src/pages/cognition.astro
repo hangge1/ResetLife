@@ -1,0 +1,201 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import {
+  cognitionQuestions,
+  conceptOptions,
+  feynmanConfidenceOptions,
+  lifeAreas,
+  readingImpactOptions,
+} from "@/data/site";
+---
+
+<SiteLayout title="认知重塑 | 复位" description="你先从选项里抓住一个问题、一个概念，我们再慢慢把混乱整理出来。">
+  <SiteHeader />
+  <main class="tool-page">
+    <section class="tool-hero">
+      <p class="eyebrow">Cognition</p>
+      <h1>认知重塑</h1>
+      <p>如果你现在脑子很乱，我们不急着输出观点。你先从选项里找到一个最接近自己的真实问题。</p>
+    </section>
+
+    <section class="tool-grid wide-form">
+      <form class="tool-panel" id="cognition-form">
+        <div class="panel-heading">
+          <h2>选择式认知记录</h2>
+          <p>你先选问题、领域、概念和读后影响。最后如果还想补一句，再写一句就够了。</p>
+        </div>
+
+        <fieldset>
+          <legend>你最近真正困惑的问题，更像哪一个？</legend>
+          <div class="choice-grid">
+            {cognitionQuestions.map((question) => (
+              <label class="choice-card">
+                <input type="radio" name="question" value={question} />
+                <span>{question}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果你的问题更具体，可以自己写
+            <input name="customQuestion" placeholder="例如：我为什么一到晚上就开始逃避所有计划" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>你觉得它主要属于哪个系统？</legend>
+          <div class="choice-grid">
+            {lifeAreas.map((area) => (
+              <label class="choice-card">
+                <input type="radio" name="domain" value={area} />
+                <span>{area}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            你也可以写自己的分类
+            <input name="customDomain" placeholder="例如：家庭、身份感、长期主义" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>今天我们先抓住哪张概念卡？</legend>
+          <div class="choice-grid">
+            {conceptOptions.map((concept) => (
+              <label class="choice-card">
+                <input type="radio" name="conceptName" value={concept} />
+                <span>{concept}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果你有自己的概念，也可以写下来
+            <input name="customConceptName" placeholder="例如：自我消耗、启动阻力、心理安全感" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>这次阅读或思考，对你有什么影响？</legend>
+          <div class="choice-grid">
+            {readingImpactOptions.map((impact) => (
+              <label class="choice-card">
+                <input type="radio" name="readingImpact" value={impact} />
+                <span>{impact}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            你也可以写自己的影响
+            <input name="customReadingImpact" placeholder="例如：我突然意识到自己一直在逃避选择" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>如果讲给别人，你现在能讲到什么程度？</legend>
+          <div class="choice-grid">
+            {feynmanConfidenceOptions.map((confidence) => (
+              <label class="choice-card">
+                <input type="radio" name="feynmanConfidence" value={confidence} />
+                <span>{confidence}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果选项不准，你可以自己说
+            <input name="customFeynmanConfidence" placeholder="例如：我能讲感觉，但还讲不出结构" />
+          </label>
+        </fieldset>
+
+        <label>
+          可选补充
+          <textarea name="note" rows="3" placeholder="只写一句也可以：我现在最想弄懂的是……"></textarea>
+        </label>
+
+        <button class="button button-primary" type="submit">保存认知记录</button>
+      </form>
+
+      <aside class="tool-panel">
+        <div class="panel-heading">
+          <h2>认知循环</h2>
+          <p>阅读 -> 提问 -> 读后感 -> 概念卡片 -> 费曼表达 -> 再阅读 -> 修正认知</p>
+        </div>
+        <div class="acceptance-list">
+          <span>你先选一个问题，不要试图整理全部人生。</span>
+          <span>你先抓一个概念，不要急着搭完整体系。</span>
+          <span>你讲不清不是失败，它只是告诉我们下一轮该读什么。</span>
+        </div>
+        <div class="saved-list" id="cognition-list"></div>
+      </aside>
+    </section>
+  </main>
+  <SiteFooter />
+</SiteLayout>
+
+<script is:inline>
+  const storageKey = "resetlife:cognition-records";
+  const form = document.querySelector("#cognition-form");
+  const list = document.querySelector("#cognition-list");
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function readItems() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function writeItems(items) {
+    localStorage.setItem(storageKey, JSON.stringify(items.slice(0, 30)));
+  }
+
+  function renderList() {
+    const items = readItems();
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-note">还没有认知记录。</p>';
+      return;
+    }
+    list.innerHTML = items
+      .map(
+        (item) => `
+          <article class="saved-item">
+            <span>${escapeHtml(item.date)} · ${escapeHtml(item.domain || "暂未选择")}</span>
+            <strong>${escapeHtml(item.question)}</strong>
+            <p>概念：${escapeHtml(item.conceptName || "暂未选择")}</p>
+            <p>表达状态：${escapeHtml(item.feynmanConfidence || "暂未选择")}</p>
+          </article>
+        `,
+      )
+      .join("");
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const item = {
+      question: String(data.get("customQuestion") || data.get("question") || "").trim(),
+      domain: String(data.get("customDomain") || data.get("domain") || "").trim(),
+      conceptName: String(data.get("customConceptName") || data.get("conceptName") || "").trim(),
+      readingImpact: String(data.get("customReadingImpact") || data.get("readingImpact") || "").trim(),
+      feynmanConfidence: String(data.get("customFeynmanConfidence") || data.get("feynmanConfidence") || "").trim(),
+      note: String(data.get("note") || "").trim(),
+    };
+    item.date = new Date().toLocaleString("zh-CN", { hour12: false });
+    if (!String(item.question || "").trim()) return;
+    writeItems([item, ...readItems()]);
+    form.reset();
+    renderList();
+  });
+
+  renderList();
+</script>

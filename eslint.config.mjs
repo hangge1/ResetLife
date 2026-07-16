@@ -24,9 +24,9 @@ export default defineConfig([
     ".next/**",
     "dist/**",
     "node_modules/**",
-    "web/.astro/**",
-    "web/dist/**",
-    "web/node_modules/**",
+    "frontend/.astro/**",
+    "frontend/dist/**",
+    "frontend/node_modules/**",
     "_bmad/**",
     "_bmad-output/**",
     "app/**",
@@ -39,7 +39,7 @@ export default defineConfig([
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ["scripts/**/*.mjs", "tests/go-astro-default.test.mjs", "web/src/**/*.ts"],
+    files: ["scripts/**/*.mjs", "tests/go-astro-default.test.mjs", "frontend/src/**/*.ts"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",

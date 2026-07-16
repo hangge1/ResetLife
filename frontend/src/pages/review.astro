@@ -1,0 +1,144 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteLayout from "@/layouts/SiteLayout.astro";
+---
+
+<SiteLayout title="复盘复诊 | 复位" description="做完一个小动作之后，我们回来看看有没有好一点，是否需要调整方向。">
+  <SiteHeader />
+  <main class="tool-page">
+    <section class="tool-hero">
+      <p class="eyebrow">Review</p>
+      <h1>复盘复诊</h1>
+      <p>做完一小步以后，我们回来看看：有没有轻一点，卡在哪里，要不要换一条修复方向。</p>
+    </section>
+
+    <section class="tool-grid">
+      <form class="tool-panel" id="review-form">
+        <div class="panel-heading">
+          <h2>我们做一次简短复诊</h2>
+          <p>不用写长复盘。你先选最接近自己的答案，再补一句自己的话。</p>
+        </div>
+
+        <fieldset>
+          <legend>现在比刚开始好一点了吗？</legend>
+          <div class="choice-grid">
+            <label class="choice-card"><input type="radio" name="relief" value="轻了一点" /><span>轻了一点</span></label>
+            <label class="choice-card"><input type="radio" name="relief" value="差不多" /><span>差不多</span></label>
+            <label class="choice-card"><input type="radio" name="relief" value="更乱了" /><span>更乱了</span></label>
+            <label class="choice-card"><input type="radio" name="relief" value="说不清" /><span>说不清</span></label>
+          </div>
+          <label class="custom-field">
+            你也可以自己描述
+            <input name="customRelief" placeholder="例如：没有变好，但我至少开始动了一下" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>刚才最卡的是哪里？</legend>
+          <div class="choice-grid">
+            <label class="choice-card"><input type="radio" name="blocker" value="情绪太重" /><span>情绪太重</span></label>
+            <label class="choice-card"><input type="radio" name="blocker" value="问题还是太乱" /><span>问题还是太乱</span></label>
+            <label class="choice-card"><input type="radio" name="blocker" value="动作还是太大" /><span>动作还是太大</span></label>
+            <label class="choice-card"><input type="radio" name="blocker" value="我完成了，想继续" /><span>我完成了，想继续</span></label>
+          </div>
+          <label class="custom-field">
+            如果选项不准，你可以写自己的卡点
+            <input name="customBlocker" placeholder="例如：我一开始就觉得自己肯定做不好" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>下一轮要不要调整方向？</legend>
+          <div class="choice-grid">
+            <label class="choice-card"><input type="radio" name="nextDirection" value="继续心理重建" /><span>继续心理重建</span></label>
+            <label class="choice-card"><input type="radio" name="nextDirection" value="转向认知重塑" /><span>转向认知重塑</span></label>
+            <label class="choice-card"><input type="radio" name="nextDirection" value="转向行为重构" /><span>转向行为重构</span></label>
+            <label class="choice-card"><input type="radio" name="nextDirection" value="重新诊断" /><span>重新诊断</span></label>
+          </div>
+        </fieldset>
+
+        <label>
+          留给下一轮自己的话
+          <textarea name="note" rows="3" placeholder="例如：我不是没救，我只是需要把动作再缩小一点。"></textarea>
+        </label>
+
+        <button class="button button-primary" type="submit">保存这次复盘</button>
+      </form>
+
+      <aside class="tool-panel">
+        <div class="panel-heading">
+          <h2>你的复盘记录</h2>
+          <p>每次回来复盘，不是为了责备自己，而是为了调整下一轮的问诊和方案。</p>
+        </div>
+        <div class="saved-list" id="review-list"></div>
+      </aside>
+    </section>
+  </main>
+  <SiteFooter />
+</SiteLayout>
+
+<script is:inline>
+  const storageKey = "resetlife:reviews";
+  const form = document.querySelector("#review-form");
+  const list = document.querySelector("#review-list");
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function readItems() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function writeItems(items) {
+    localStorage.setItem(storageKey, JSON.stringify(items.slice(0, 30)));
+  }
+
+  function renderList() {
+    const items = readItems();
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-note">还没有复盘记录。</p>';
+      return;
+    }
+    list.innerHTML = items
+      .map(
+        (item) => `
+          <article class="saved-item">
+            <span>${escapeHtml(item.date)}</span>
+            <strong>${escapeHtml(item.relief || "暂未描述")}</strong>
+            <p>卡点：${escapeHtml(item.blocker || "暂未选择")}</p>
+            <p>下一轮：${escapeHtml(item.nextDirection || "暂未选择")}</p>
+          </article>
+        `,
+      )
+      .join("");
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const item = {
+      relief: String(data.get("customRelief") || data.get("relief") || "").trim(),
+      blocker: String(data.get("customBlocker") || data.get("blocker") || "").trim(),
+      nextDirection: String(data.get("nextDirection") || "").trim(),
+      note: String(data.get("note") || "").trim(),
+      date: new Date().toLocaleString("zh-CN", { hour12: false }),
+    };
+    writeItems([item, ...readItems()]);
+    form.reset();
+    renderList();
+  });
+
+  renderList();
+</script>

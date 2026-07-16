@@ -57,11 +57,11 @@ process.on("SIGINT", () => shutdown(0));
 process.on("SIGTERM", () => shutdown(0));
 
 spawnProcess("api", resolveGoCommand(), ["run", "./cmd/api"], {
-  cwd: resolve(projectRoot, "server"),
+  cwd: resolve(projectRoot, "backend"),
   env: {
     API_ADDR: process.env.API_ADDR ?? "127.0.0.1:8080",
-    DATA_DIR: process.env.DATA_DIR ?? resolve(projectRoot, "server", "data"),
+    DATA_DIR: process.env.DATA_DIR ?? resolve(projectRoot, "backend", "data"),
   },
 });
 
-spawnProcess("web", process.platform === "win32" ? "npm.cmd" : "npm", ["--prefix", "web", "run", "dev"]);
+spawnProcess("frontend", process.platform === "win32" ? "npm.cmd" : "npm", ["--prefix", "frontend", "run", "dev"]);

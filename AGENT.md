@@ -8,7 +8,7 @@
 
 - `npm run dev`：启动 Go API + Astro dev server。
 - `npm run build`：构建 Astro 静态站点并编译 Go API。
-- `npm run start`：Go 服务托管 `web/dist` 并提供 `/api/*`。
+- `npm run start`：Go 服务托管 `frontend/dist` 并提供 `/api/*`。
 - `npm run release`：生成 Go + Astro 宝塔部署包。
 - `npm run deploy:cloud`：上传 Go/Astro 发布包并重启服务器上的 Go API。
 
@@ -16,7 +16,7 @@
 
 ## 项目概览
 
-根路径 `/` 是公开个人站首页，展示认知、技术和项目板块。跑步瘦身助手是项目板块中的一个独立应用，详情页在 `/projects/slimming`，应用入口在 `/app/slimming`。
+根路径 `/` 是“复位”首页，定位为重建人生系统。当前站点地图是 `/diagnosis` 问诊诊断 -> `/plan` 复位方案 -> `/psychology`、`/cognition`、`/action` 三大修复方向 -> `/review` 复盘复诊。表单数据第一版保存到浏览器本地。跑步瘦身助手作为行为重构系统中的工具入口保留，详情页在 `/projects/slimming`，应用入口在 `/app/slimming`。
 
 跑步瘦身助手当前能力：
 
@@ -31,8 +31,8 @@
 
 ## 技术栈
 
-- `web/`：Astro + Vue
-- `server/`：Go + SQLite
+- `frontend/`：Astro + Vue
+- `backend/`：Go + SQLite
 - `scripts/`：Node.js 辅助脚本，只负责开发编排、发布打包和云部署
 - `tests/`：Node test runner，验证 Go/Astro 默认架构
 
@@ -50,8 +50,8 @@ npm run release
 
 ## 目录结构
 
-- `web/`：个人站和跑步助手前端。
-- `server/`：Go API、业务服务、SQLite repository。
+- `frontend/`：复位网站和跑步助手前端。
+- `backend/`：Go API、业务服务、SQLite repository。
 - `scripts/`：`dev-go-astro`、`start-go-astro`、发布包和云部署脚本。
 - `tests/`：默认架构回归测试。
 - `doc/`：规划和部署文档。
@@ -60,7 +60,7 @@ npm run release
 ## 开发约束
 
 - 页面、表单、错误信息和用户可见文案使用中文。
-- 根路径 `/` 保持为个人站首页，不要重新变成跑步助手首页。
+- 根路径 `/` 保持为复位首页，不要重新变成跑步助手首页。
 - 跑步助手应用入口保持 `/app/slimming`。
 - 前端通过 `/api/*` 调用 Go 后端。
 - 不直接在前端写数据库。
@@ -68,7 +68,11 @@ npm run release
 - 跑步配速是只读计算值，由运动时长和公里数得到。
 - 访客模式只做临时体验，数据不写入持久数据库。
 - SMTP 发信配置只允许管理员维护。
-- 运行产物不要提交：`dist/`、`web/dist/`、`data/`、`server/data/`、`.dev-logs/`、`.agents/`、`node_modules/`。
+- 运行产物不要提交：`dist/`、`frontend/dist/`、`data/`、`backend/data/`、`.dev-logs/`、`.agents/`、`node_modules/`。
+
+## 产品硬约束
+
+产品体验规则单独维护在 `doc/product-constraints.md`。新增页面、修改表单交互、调整页面文案前，必须先阅读并遵守该文档。
 
 ## 验证要求
 

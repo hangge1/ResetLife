@@ -235,17 +235,17 @@ function writeDeployFiles() {
 
 assertInside(distRoot, stagingRoot);
 
-run("npm", ["--prefix", "web", "run", "build"]);
-run("go", ["test", "./..."], { cwd: resolve(projectRoot, "server") });
+run("npm", ["--prefix", "frontend", "run", "build"]);
+run("go", ["test", "./..."], { cwd: resolve(projectRoot, "backend") });
 
 rmSync(stagingRoot, { recursive: true, force: true });
 mkdirSync(resolve(packageRoot, "public"), { recursive: true });
 mkdirSync(resolve(packageRoot, "api"), { recursive: true });
 
-cpSync(resolve(projectRoot, "web", "dist"), resolve(packageRoot, "public"), { recursive: true });
+cpSync(resolve(projectRoot, "frontend", "dist"), resolve(packageRoot, "public"), { recursive: true });
 
 run("go", ["build", "-trimpath", "-ldflags=-s -w", "-o", resolve(packageRoot, "api", apiBinaryName), "./cmd/api"], {
-  cwd: resolve(projectRoot, "server"),
+  cwd: resolve(projectRoot, "backend"),
   env: {
     CGO_ENABLED: "0",
     GOOS: targetOs,

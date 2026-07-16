@@ -4,11 +4,17 @@
 
 项目已经切换为 **Astro/Vue 前端 + Go API 后端**。
 
-- `/` 是个人 Web 站点首页，包含认知、技术、项目三个板块。
-- `/projects/slimming` 是跑步瘦身助手的项目详情页。
+- `/` 是“复位”首页，定位为重建人生系统。
+- `/diagnosis` 是卡片式复位问诊页，问诊后会生成最新复位方案。
+- `/plan` 是复位方案页，承接诊断结果，并给出优先修复方向。
+- `/psychology`、`/cognition`、`/action` 是诊断方案里的三大修复方向：心理重建、认知重塑、行为重构。
+- `/review` 是复盘复诊页，用来判断有没有好一点、哪里卡住了、下一轮是否调整方向。
+- `/projects/slimming` 是跑步瘦身助手的工具详情页，作为行为重构系统中的工具入口保留。
 - `/app/slimming` 是跑步瘦身助手应用入口。
-- Go 服务提供 `/api/*`，同时在生产模式下可以托管 `web/dist` 静态文件。
+- Go 服务提供 `/api/*`，同时在生产模式下可以托管 `frontend/dist` 静态文件。
 - 宝塔部署发布包位于 `dist/releases/*-go-astro-*.tar.gz`。
+
+复位的产品硬约束单独维护在 `doc/product-constraints.md`，包括选择题优先、可选自定义输入、面对面对话式文案、卡片式问诊诊断等规则。
 
 跑步瘦身助手仍是一个面向个人和小范围私有使用的健康记录工具，覆盖账号隔离、健康记录、跑步记录、目标管理、历史编辑、提醒规则、SMTP 邮件提醒和管理员用户管理。
 
@@ -32,14 +38,14 @@
 
 ```bash
 npm install
-npm --prefix web install
+npm --prefix frontend install
 npm run dev
 npm run check
 npm run build
 npm run release
 ```
 
-`npm run dev` 会同时启动 Go API 和 Astro dev server。`npm run start` 会启动 Go 服务，并把 `STATIC_DIR` 指向 `web/dist`。
+`npm run dev` 会同时启动 Go API 和 Astro dev server。`npm run start` 会启动 Go 服务，并把 `STATIC_DIR` 指向 `frontend/dist`。
 
 ## 宝塔部署
 
@@ -51,7 +57,7 @@ npm run release
 
 发布包包含：
 
-- `web/public/`：Astro 开发期静态资源；发布包内会生成 `public/` 静态站点目录
+- `frontend/public/`：Astro 开发期静态资源；发布包内会生成 `public/` 静态站点目录
 - `api/resetlife-api`：Linux Go API 二进制
 - `scripts/restart-api.sh`：加载 `.env` 后重启 API
 - `nginx-site.conf.example`：宝塔/Nginx 反代示例
@@ -109,8 +115,8 @@ REMINDER_CHECK_DISABLED=1
 ## 目录结构
 
 ```text
-web/      Astro/Vue 前端
-server/   Go API、SQLite 存储和业务服务
+frontend/  Astro/Vue 前端
+backend/   Go API、SQLite 存储和业务服务
 scripts/  开发、启动、发布和云部署脚本
 tests/    Go/Astro 架构与脚本回归测试
 doc/      规划、部署和开发记录

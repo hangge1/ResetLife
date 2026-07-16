@@ -1,0 +1,182 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { acceptanceOptions, emotionOptions, thoughtOptions, triggerOptions } from "@/data/site";
+---
+
+<SiteLayout title="心理重建 | 复位" description="你不用写长篇自我分析，先通过选择题看见自己的情绪和自动想法。">
+  <SiteHeader />
+  <main class="tool-page">
+    <section class="tool-hero">
+      <p class="eyebrow">Psychology</p>
+      <h1>心理重建</h1>
+      <p>如果你说不清为什么难受，我们就先不逼自己解释。你只要选一选：我有什么感受，它可能从哪里来，我正在怎样攻击自己。</p>
+    </section>
+
+    <section class="tool-grid">
+      <form class="tool-panel" id="reflection-form">
+        <div class="panel-heading">
+          <h2>选择式自我观察</h2>
+          <p>不用写一篇完整文章。你先选最接近自己的答案，我们先留下一条清楚的观察。</p>
+        </div>
+
+        <fieldset>
+          <legend>今天最强烈的情绪是什么？</legend>
+          <div class="choice-grid">
+            {emotionOptions.map((emotion) => (
+              <label class="choice-card">
+                <input type="radio" name="emotion" value={emotion} />
+                <span>{emotion}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果这个情绪不在选项里，你可以自己写
+            <input name="customEmotion" placeholder="例如：像被卡住、发空、很烦但说不清" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>你觉得它可能从哪里来？</legend>
+          <div class="choice-grid">
+            {triggerOptions.map((trigger) => (
+              <label class="choice-card">
+                <input type="radio" name="trigger" value={trigger} />
+                <span>{trigger}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            你也可以写自己的触发点
+            <input name="customTrigger" placeholder="例如：看到某个人的消息后突然不舒服" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>你脑子里最像哪句话？</legend>
+          <div class="choice-grid">
+            {thoughtOptions.map((thought) => (
+              <label class="choice-card">
+                <input type="radio" name="thought" value={thought} />
+                <span>{thought}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            如果你脑子里有另一句话，写下来
+            <input name="customThought" placeholder="例如：我好像又要把事情搞砸了" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>今天你想先用哪句话接住自己？</legend>
+          <div class="choice-grid">
+            {acceptanceOptions.map((acceptance) => (
+              <label class="choice-card">
+                <input type="radio" name="acceptance" value={acceptance} />
+                <span>{acceptance}</span>
+              </label>
+            ))}
+          </div>
+          <label class="custom-field">
+            你也可以写一句真正能接住自己的话
+            <input name="customAcceptance" placeholder="例如：我现在很乱，但我还能先做一小步" />
+          </label>
+        </fieldset>
+
+        <label>
+          可选补充
+          <textarea name="note" rows="3" placeholder="如果你想补一句发生了什么，可以写在这里；说不清也可以留空。"></textarea>
+        </label>
+
+        <button class="button button-primary" type="submit">保存自我观察</button>
+      </form>
+
+      <aside class="tool-panel">
+        <div class="panel-heading">
+          <h2>自我接纳提示</h2>
+          <p>我们不是在诊断你，而是在帮你停止把所有混乱都解释成“我不行”。</p>
+        </div>
+        <div class="acceptance-list">
+          <span>你先识别情绪，再解释原因。</span>
+          <span>你先看见自动想法，再决定要不要相信它。</span>
+          <span>你先把自己接住，再考虑如何改变。</span>
+        </div>
+        <div class="saved-list" id="reflection-list"></div>
+      </aside>
+    </section>
+  </main>
+  <SiteFooter />
+</SiteLayout>
+
+<script is:inline>
+  const storageKey = "resetlife:reflections";
+  const form = document.querySelector("#reflection-form");
+  const list = document.querySelector("#reflection-list");
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;",
+    })[char]);
+  }
+
+  function readItems() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "[]");
+    } catch {
+      return [];
+    }
+  }
+
+  function writeItems(items) {
+    localStorage.setItem(storageKey, JSON.stringify(items.slice(0, 30)));
+  }
+
+  function renderList() {
+    const items = readItems();
+    if (!items.length) {
+      list.innerHTML = '<p class="empty-note">还没有自我观察记录。</p>';
+      return;
+    }
+    list.innerHTML = items
+      .map(
+        (item) => `
+          <article class="saved-item">
+            <span>${escapeHtml(item.date)}</span>
+            <strong>${escapeHtml(item.title)}</strong>
+            <p>触发：${escapeHtml(item.trigger || "暂未选择")}</p>
+            <p>接纳：${escapeHtml(item.acceptance || "暂未选择")}</p>
+          </article>
+        `,
+      )
+      .join("");
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const emotion = String(data.get("customEmotion") || data.get("emotion") || "").trim();
+    if (!emotion) return;
+    const thought = String(data.get("customThought") || data.get("thought") || "").trim();
+    const item = {
+      type: "心理",
+      title: `${emotion}${thought ? `：${thought}` : "观察"}`,
+      emotion,
+      trigger: String(data.get("customTrigger") || data.get("trigger") || "").trim(),
+      thought,
+      acceptance: String(data.get("customAcceptance") || data.get("acceptance") || "").trim(),
+      note: String(data.get("note") || "").trim(),
+      date: new Date().toLocaleString("zh-CN", { hour12: false }),
+    };
+    writeItems([item, ...readItems()]);
+    form.reset();
+    renderList();
+  });
+
+  renderList();
+</script>

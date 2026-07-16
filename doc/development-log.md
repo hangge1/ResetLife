@@ -231,7 +231,7 @@ npm run ui:screenshot
 - 登录页恢复独立全屏运动背景和居中登录卡片；登录后恢复应用动态背景、首页可交互卡片、左右翻页热区和统一按钮视觉。
 - 默认管理员由 Go 启动时保证存在，当前默认账号为 `admin / admin123456`。
 - 清理重构前遗留的旧 Next/React/Drizzle 源码、shadcn 配置、根 `public/` 静态目录、旧 Next 构建产物、旧截图产物和临时旧 CSS 导出文件。
-- `.gitignore` 增加 `.dev-logs/` 与 `server/data/`，避免开发日志和本地 SQLite 数据库进入版本库。
+- `.gitignore` 增加 `.dev-logs/` 与 `backend/data/`，避免开发日志和本地 SQLite 数据库进入版本库。
 
 ### 防回归约定
 
@@ -239,7 +239,7 @@ npm run ui:screenshot
 - 不要把根路径 `/` 改回跑步瘦身助手；跑步助手应用入口保持 `/app/slimming`。
 - 跑步助手页面必须保持分区隔离，不能把首页、打卡、数据、历史、设置的全部卡片一次性展示。
 - 登录页和应用页的运动背景、首页卡片交互、翻页热区和统一按钮视觉属于核心体验，不应在后续样式调整中移除。
-- 本地运行数据只放在 `server/data/`，发布产物只放在 `dist/` 或发布包内，不进入版本库。
+- 本地运行数据只放在 `backend/data/`，发布产物只放在 `dist/` 或发布包内，不进入版本库。
 
 ### 验证记录
 
@@ -292,7 +292,7 @@ Chrome 移动端截图检查：首页首屏和认知板块布局正常
 ### 已完成调整
 
 - 根项目包名从 `slimming-assistant` 调整为 `reset-life`。
-- Go module 从 `slimmingassistant/server` 调整为 `resetlife/server`，同步更新所有 Go import。
+- Go module 从 `slimmingassistant/server` 调整为 `resetlife/backend`，同步更新所有 Go import。
 - Go API 二进制名从 `slimmingassistant-api` 调整为 `resetlife-api`。
 - 发布包名前缀从 `slimming-assistant-go-astro` 调整为 `reset-life-go-astro`。
 - 默认宝塔部署目录从 `/www/wwwroot/slimming-assistant` 调整为 `/www/wwwroot/reset-life`。
@@ -308,7 +308,7 @@ Chrome 移动端截图检查：首页首屏和认知板块布局正常
 
 - 当前仓库、发布包、部署根目录和 Go module 均以 `ResetLife/reset-life/resetlife` 为准。
 - 后续新增部署文档时不要再使用 `/www/wwwroot/slimming-assistant` 作为默认目录。
-- 后续新增 Go import 时必须使用 `resetlife/server/...`。
+- 后续新增 Go import 时必须使用 `resetlife/backend/...`。
 
 ### 验证记录
 

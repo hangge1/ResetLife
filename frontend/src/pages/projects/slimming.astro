@@ -1,0 +1,51 @@
+---
+import SiteFooter from "@/components/SiteFooter.astro";
+import SiteHeader from "@/components/SiteHeader.astro";
+import SiteLayout from "@/layouts/SiteLayout.astro";
+---
+
+<SiteLayout title="跑步瘦身助手 | 行为重构" description="如果你想先从身体秩序开始，可以用跑步瘦身助手记录行动和反馈。">
+  <SiteHeader />
+  <main class="project-detail">
+    <section class="detail-hero">
+      <img class="detail-backdrop" src="/projects/slimming-home-preview.png" alt="" aria-hidden="true" />
+      <div class="detail-hero-copy">
+        <p class="eyebrow">从身体秩序开始</p>
+        <h1>跑步瘦身助手</h1>
+        <p>
+          如果你想先从身体秩序开始，我们就用跑步瘦身助手来记录每天的身体状态、跑步行动、目标差距和提醒反馈。
+        </p>
+        <div class="actions">
+          <a class="button button-primary" href="/app/slimming/">进入应用</a>
+          <a class="button button-secondary" href="/action/">返回行为重构</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-muted">
+      <div class="section-heading">
+        <p>Action Tool</p>
+        <h2>你可以先把健康行动记录下来</h2>
+        <span>你不需要把全部复位过程都想清楚。想先从身体开始时，就先把行动记录下来。</span>
+      </div>
+      <div class="card-grid">
+        <article class="card">
+          <span class="card-index">前端</span>
+          <h3>Astro + Vue</h3>
+          <p>你现在看到的是 Astro 生成的页面，进入应用后会切到 Vue 的交互界面。</p>
+        </article>
+        <article class="card">
+          <span class="card-index">后端</span>
+          <h3>Go API</h3>
+          <p>当你登录、记录、设置目标或提醒时，Go API 会在后面保存这些数据。</p>
+        </article>
+        <article class="card">
+          <span class="card-index">部署</span>
+          <h3>宝塔部署</h3>
+          <p>线上访问时，你打开的是静态页面；需要数据时，请求会转到 Go 服务。</p>
+        </article>
+      </div>
+    </section>
+  </main>
+  <SiteFooter />
+</SiteLayout>

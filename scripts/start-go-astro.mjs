@@ -3,13 +3,13 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const projectRoot = resolve(import.meta.dirname, "..");
-const staticDir = resolve(projectRoot, "web", "dist");
+const staticDir = resolve(projectRoot, "frontend", "dist");
 const portArgIndex = process.argv.indexOf("--port");
 const port = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : "";
 const defaultAddr = port ? `0.0.0.0:${port}` : "127.0.0.1:8080";
 
 if (!existsSync(resolve(staticDir, "index.html"))) {
-  console.error("Missing Astro build output: web/dist/index.html");
+  console.error("Missing Astro build output: frontend/dist/index.html");
   console.error("Run npm run build before npm run start.");
   process.exit(1);
 }
@@ -34,11 +34,11 @@ function resolveCommand(command, args) {
 
 const goCommand = resolveCommand(resolveGoCommand(), ["run", "./cmd/api"]);
 const child = spawn(goCommand.command, goCommand.args, {
-  cwd: resolve(projectRoot, "server"),
+  cwd: resolve(projectRoot, "backend"),
   env: {
     ...process.env,
     API_ADDR: process.env.API_ADDR ?? defaultAddr,
-    DATA_DIR: process.env.DATA_DIR ?? resolve(projectRoot, "server", "data"),
+    DATA_DIR: process.env.DATA_DIR ?? resolve(projectRoot, "backend", "data"),
     STATIC_DIR: process.env.STATIC_DIR ?? staticDir,
   },
   shell: false,
