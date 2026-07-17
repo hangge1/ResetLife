@@ -19,6 +19,8 @@ const explicitArchive = process.env.DEPLOY_ARCHIVE;
 const currentLink = process.env.DEPLOY_CURRENT_LINK ?? `${appRoot}/current`;
 const appPort = process.env.DEPLOY_APP_PORT ?? "8080";
 const restartApp = process.env.DEPLOY_RESTART !== "0";
+const syncBtGoProject = process.env.DEPLOY_BT_GO_PROJECT !== "0";
+const btGoProjectName = process.env.DEPLOY_BT_GO_PROJECT_NAME ?? "reset_life";
 const dataRoot = process.env.DEPLOY_DATA_ROOT ?? `${appRoot}/data`;
 const sqlitePath = process.env.DEPLOY_SQLITE_PATH ?? `${dataRoot}/app.sqlite`;
 const internalReminderToken = process.env.DEPLOY_INTERNAL_REMINDER_TOKEN?.trim() ?? "";
@@ -197,6 +199,7 @@ console.log(`Deploy target: ${remote}:${remotePackageRoot}`);
 console.log(`Current link: ${currentLink}`);
 console.log(`SQLite path: ${sqlitePath}`);
 console.log(`Restart app: ${restartApp ? `yes, direct Go process on port ${appPort}` : "no"}`);
+console.log(`BT Go project sync: ${syncBtGoProject ? `yes, ${btGoProjectName}` : "no"}`);
 console.log(`Keep releases: ${keepReleaseCount}`);
 console.log(`Archive: ${archivePath}`);
 console.log(`Command timeout: ${commandTimeoutMs}ms`);
@@ -235,6 +238,80 @@ const remoteCommand = [
         `timeout ${remoteRestartTimeoutSeconds}s bash -lc "until curl -fsS http://127.0.0.1:${appPort}/api/healthz >/dev/null; do sleep 2; done" || (tail -80 ./api/api.log; exit 1)`,
       ]
     : []),
+  ...(syncBtGoProject
+    ? [
+        `echo "[deploy] sync BT Go project ${btGoProjectName}"`,
+        [
+          `if [ -x /www/server/panel/pyenv/bin/python ] && [ -d /www/server/panel/class ]; then`,
+          `cat > /tmp/reset-life-sync-bt-go.py <<'PY'`,
+          `import json, os, sys`,
+          `sys.path.insert(0, '/www/server/panel/class')`,
+          `import public`,
+          ``,
+          `name = os.environ['BT_GO_PROJECT_NAME']`,
+          `current_link = os.environ['RESET_LIFE_CURRENT_LINK'].rstrip('/')`,
+          `app_port = int(os.environ['RESET_LIFE_APP_PORT'])`,
+          `project_exe = current_link + '/api/resetlife-api'`,
+          `project_path = current_link`,
+          `pid_path = current_link + '/api/api.pid'`,
+          `pid = ''`,
+          `if os.path.exists(pid_path):`,
+          `    with open(pid_path, 'r', encoding='utf-8') as pid_file:`,
+          `        pid = pid_file.read().strip()`,
+          `os.makedirs('/var/tmp/gopids', exist_ok=True)`,
+          `os.chmod('/var/tmp/gopids', 0o777)`,
+          `if pid:`,
+          `    public.writeFile('/var/tmp/gopids/%s.pid' % name, pid)`,
+          ``,
+          `config = {`,
+          `    'ssl_path': '/www/wwwroot/java_node_ssl',`,
+          `    'project_name': name,`,
+          `    'project_exe': project_exe,`,
+          `    'bind_extranet': 0,`,
+          `    'domains': [],`,
+          `    'project_cmd': './api/resetlife-api',`,
+          `    'is_power_on': 0,`,
+          `    'run_user': 'root',`,
+          `    'port': app_port,`,
+          `    'project_path': project_path,`,
+          `    'log_path': '/www/wwwlogs/go',`,
+          `    'project_log': 1,`,
+          `    'porject_log': 1,`,
+          `    'web_log': 0,`,
+          `    'env_file': '',`,
+          `    'env_list': [],`,
+          `}`,
+          `pdata = {`,
+          `    'name': name,`,
+          `    'path': project_exe,`,
+          `    'ps': 'ResetLife Go API registered by deployment script; Nginx serves Astro static + /api proxy.',`,
+          `    'status': 1,`,
+          `    'type_id': 0,`,
+          `    'edate': '0000-00-00',`,
+          `    'project_type': 'Go',`,
+          `    'project_config': json.dumps(config, ensure_ascii=False),`,
+          `    'rname': '',`,
+          `    'stop': '',`,
+          `}`,
+          `row = public.M('sites').where('name=?', (name,)).find()`,
+          `if row:`,
+          `    public.M('sites').where('id=?', (row['id'],)).update(pdata)`,
+          `    action = 'updated'`,
+          `    project_id = row['id']`,
+          `else:`,
+          `    pdata['addtime'] = public.getDate()`,
+          `    project_id = public.M('sites').insert(pdata)`,
+          `    action = 'inserted'`,
+          `print(json.dumps({'action': action, 'id': project_id, 'pid': pid}, ensure_ascii=False))`,
+          `PY`,
+          `BT_GO_PROJECT_NAME=${shellQuote(btGoProjectName)} RESET_LIFE_CURRENT_LINK=${shellQuote(currentLink)} RESET_LIFE_APP_PORT=${shellQuote(appPort)} /www/server/panel/pyenv/bin/python /tmp/reset-life-sync-bt-go.py`,
+          `rm -f /tmp/reset-life-sync-bt-go.py`,
+          `else`,
+          `echo "[deploy] BT panel Python not found; skipped BT Go project sync"`,
+          `fi`,
+        ].join("\n"),
+      ]
+    : []),
   `echo "[deploy] clean release archives and old directories"`,
   `find ${shellQuote(deployRoot)} -maxdepth 1 -type f \\( -name 'reset-life-go-astro-*.tar.gz' -o -name 'reset-life-go-astro-*.zip' \\) -delete`,
   `find ${shellQuote(deployRoot)} -maxdepth 1 -type d -name 'reset-life-go-astro-*' -printf '%T@ %p\\n' | sort -rn | awk 'NR > ${keepReleaseCount} { sub(/^[^ ]+ /, ""); print }' | while IFS= read -r old_dir; do rm -rf -- "$old_dir"; done`,
@@ -244,6 +321,7 @@ const remoteCommand = [
   `echo "SQLite path is ${sqlitePath}"`,
   `echo "Kept latest ${keepReleaseCount} release directories under ${deployRoot}"`,
   restartApp ? `echo "Go API restarted on port ${appPort}"` : `echo "App restart skipped because DEPLOY_RESTART=0"`,
+  syncBtGoProject ? `echo "BT Go project synced as ${btGoProjectName}"` : `echo "BT Go project sync skipped because DEPLOY_BT_GO_PROJECT=0"`,
 ].join(" && ");
 
 run("ssh", [...sshBaseArgs(), remote, remoteCommand]);

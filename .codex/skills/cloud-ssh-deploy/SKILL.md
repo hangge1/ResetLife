@@ -1,6 +1,6 @@
 ---
 name: cloud-ssh-deploy
-description: Project-local workflow for deploying this repository to a cloud Linux server over SSH. Use when the user asks to deploy, publish, release to cloud, update the Baota/BT Node site, run npm run deploy:cloud, or make deployment reusable across machines. Guides Codex to collect missing host/user/auth details safely, run the repo deployment script, and verify the live service without storing secrets.
+description: Project-local workflow for deploying this Go + Astro repository to a cloud Linux server over SSH. Use when the user asks to deploy, publish, release to cloud, update the Baota/BT Go project, run npm run deploy:cloud, or make deployment reusable across machines. Guides Codex to collect missing host/user/auth details safely, run the repo deployment script, and verify the live service without storing secrets.
 ---
 
 # Cloud SSH Deploy
@@ -22,9 +22,9 @@ Collect these before running a real deploy:
 - `DEPLOY_USER`: SSH username.
 - `DEPLOY_PORT`: SSH port, default `22`.
 - Auth method: existing SSH key, identity file, or user-entered password.
-- Target app port, default `3000`.
+- Target Go API port, default `8080`.
 - Release retention, default `DEPLOY_KEEP_RELEASES=3`.
-- BT Node project name/domains if project creation is needed, defaults `DEPLOY_BT_PROJECT_NAME=slimming_assistant` and `DEPLOY_BT_DOMAINS=www.hangge.xyz`.
+- BT Go project sync name, default `DEPLOY_BT_GO_PROJECT_NAME=reset_life`.
 
 If the user wants details or troubleshooting, read `references/next-bt-node.md`.
 
@@ -76,41 +76,35 @@ If no release archive exists, continue with the real deploy; it will build one.
 npm run deploy:cloud
 ```
 
-6. If the BT Node project was manually deleted or the list is empty, repair it with the project script:
+6. The normal deploy command syncs a BT Go project row named `reset_life` unless `DEPLOY_BT_GO_PROJECT=0`.
 
-```bash
-npm run bt:ensure-project
-```
-
-The normal deploy command runs this step automatically unless `DEPLOY_BT_PROJECT=0` or `DEPLOY_RESTART=0`.
+This registers the running Go API for the BT Go project list, but keeps Nginx serving Astro static files directly and proxying only `/api/`.
 
 7. Verify:
 
 ```bash
-ssh <ssh-user>@<server-host> "readlink -f /www/wwwroot/slimming-assistant-current"
-ssh <ssh-user>@<server-host> "ss -ltnp | grep ':3000'"
+ssh <ssh-user>@<server-host> "readlink -f /www/wwwroot/reset-life/current"
+ssh <ssh-user>@<server-host> "ss -ltnp | grep ':8080'"
 ```
 
-Check the public site and logout redirect:
+Check the public site and API:
 
 ```bash
-curl -I https://<domain>/access/verify
-curl -I -X POST https://<domain>/access/logout
+curl -I https://<domain>/
+curl https://<domain>/api/healthz
 ```
-
-`/access/logout` must redirect to the public domain, not `0.0.0.0`.
 
 ## Project Contract
 
 The project deploy script owns these conventions:
 
-- fixed current link: `/www/wwwroot/slimming-assistant-current`
-- shared SQLite database: `/www/wwwroot/slimming-assistant-data/slimming-assistant.sqlite`
-- production preparation: `npm run prepare:bt`
-- default restart script: `npm run start:bt:3000`
-- BT project repair script: `npm run bt:ensure-project`
-- default BT project name: `slimming_assistant`
-- default BT domain: `www.hangge.xyz`
-- default release cleanup: keep the latest 3 `slimming-assistant-*` version directories; override with `DEPLOY_KEEP_RELEASES`
+- fixed app root: `/www/wwwroot/reset-life`
+- fixed current link: `/www/wwwroot/reset-life/current`
+- shared SQLite database: `/www/wwwroot/reset-life/data/app.sqlite`
+- static site root: `/www/wwwroot/reset-life/current/public`
+- Go API binary: `/www/wwwroot/reset-life/current/api/resetlife-api`
+- default Go API port: `8080`
+- default BT Go project name: `reset_life`
+- default release cleanup: keep the latest 3 `reset-life-go-astro-*` version directories; override with `DEPLOY_KEEP_RELEASES`
 
 Do not manually reimplement these steps unless the script is broken. Fix `scripts/deploy-cloud.mjs` instead.

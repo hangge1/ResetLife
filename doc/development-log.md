@@ -381,3 +381,50 @@ npm run build
 Playwright 页面验证：选择起点、返回重选、左键拖动旋转、普通移动不旋转、滚轮 zoom、碎片正背面遮挡、状态条展示
 本地预览：http://127.0.0.1:4326/state/
 ```
+
+## 2026-07-17 自我定位星球交互收尾与线上 Go/Astro 部署
+
+### 调整背景
+
+本轮调整来自真实截图测试和云端部署反馈：自我定位页需要继续降低视觉噪音，避免碎片槽遮挡星球；生成复位报告需要更专业的过渡；线上域名 `www.hangge.xyz` 仍指向旧的瘦身助手，需要切换为当前复位人生系统，同时让宝塔 Go 项目列表能看到当前服务。
+
+### 已完成调整
+
+- 自我定位起点选择页居中展示标题和三个秩序选项；未选择起点前不显示右侧碎片槽。
+- 去掉起点选择阶段的自定义输入，确保起点只来自心理秩序、认知秩序、行动秩序三类。
+- 选择起点后隐藏上一页文案，不再让背景文字淡淡残留在星球视角中。
+- 星球视角继续放大，并移除外层透明球壳，改为更真实的纹理星球表达。
+- 三个碎片槽改为右侧游戏化 HUD，避免遮挡星球主体。
+- 碎片槽未满时点击“生成复位报告”，用温柔提示提醒“点满 3 个碎片才可以生成报告哦”。
+- 三个碎片槽点亮后，报告按钮进入点亮状态，并以游戏化 `RESET CORE` 形式呈现。
+- 生成复位报告增加进度条过渡，避免从 3D 视角直接跳到报告页。
+- 线上部署从旧 Node/Next 站点切换到 Go/Astro 发布包：
+  - 静态站点根目录：`/www/wwwroot/reset-life/current/public`
+  - Go API：`127.0.0.1:8080`
+  - 数据库：`/www/wwwroot/reset-life/data/app.sqlite`
+  - 当前 release：`/www/wwwroot/reset-life/releases/reset-life-go-astro-0.1.0-20260717T100422`
+- 停止旧的 3000 端口瘦身助手进程，`www.hangge.xyz` 首页切换为复位人生系统。
+- 新增宝塔 Go 项目同步：部署后自动登记或更新 `reset_life`，并写入 `/var/tmp/gopids/reset_life.pid`，让宝塔 Go 项目列表显示运行状态。
+- 部署脚本 `scripts/deploy-cloud.mjs` 增加 `DEPLOY_BT_GO_PROJECT` 和 `DEPLOY_BT_GO_PROJECT_NAME` 控制项，默认同步宝塔 Go 项目但不让宝塔覆盖当前 Nginx 站点配置。
+- 项目内 `cloud-ssh-deploy` Skill 文档从旧 Node 部署口径更新为当前 Go/Astro 部署口径。
+
+### 防回归约束
+
+- 线上域名 `www.hangge.xyz` 的主页必须指向复位人生系统，不应回退到瘦身助手首页。
+- 宝塔 Nginx 应保持“静态文件直出 + `/api/` 反代 Go API”的配置，不要改成整站反代到 Go。
+- 宝塔 Go 项目同步只负责让面板可见和状态可读，不负责覆盖当前域名站点配置。
+- 后续部署必须继续使用 `/www/wwwroot/reset-life/current` 软链和 `/www/wwwroot/reset-life/data/app.sqlite` 共享数据库。
+- 不要恢复旧的 3000 端口 Node 长驻服务。
+
+### 验证记录
+
+```text
+npm run check
+node scripts/deploy-cloud.mjs --skip-release --dry-run
+npm run deploy:cloud
+GET https://www.hangge.xyz/ => 200，title=复位 | 重建人生系统
+GET https://www.hangge.xyz/state/ => 200
+GET https://www.hangge.xyz/api/healthz => {"ok":true,"service":"resetlife-api"}
+ssh 服务器 ss -ltnp：仅 127.0.0.1:8080 resetlife-api，未见 :3000
+宝塔 Go 项目模型：reset_life run=true listen=[8080] listen_ok=true
+```

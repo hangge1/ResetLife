@@ -32,10 +32,6 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
               </button>
             ))}
           </div>
-          <label class="map-custom-field">
-            如果都不像，你可以自己说一句
-            <input id="custom-entry" placeholder="例如：我整个人很散，什么都抓不住" />
-          </label>
         </aside>
 
         <div class="selected-order-banner" id="selected-order-banner" hidden>
@@ -55,10 +51,18 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
             <h2 id="guide-title">现在点一个状态碎片</h2>
             <p id="guide-copy">它们会漂浮在地图上。你不需要全部选择，先点最像你的几个。</p>
           </div>
-          <div class="map-progress">
-            <span id="selected-count">0 个碎片已归位</span>
-            <button class="button button-secondary" type="button" id="finish-positioning">生成我的复位报告</button>
+          <div class="fragment-dock" id="fragment-dock" aria-label="已归位的状态碎片">
+            <span class="dock-summary" id="selected-count">0 个碎片已归位</span>
+            <div class="fragment-slots" id="fragment-slots"></div>
           </div>
+          <button class="button button-secondary map-report-button" type="button" id="finish-positioning">
+            <span class="report-button-core" aria-hidden="true"></span>
+            <span class="report-button-text">
+              <small>RESET CORE</small>
+              <strong>生成复位报告</strong>
+            </span>
+          </button>
+          <p class="report-gentle-hint" id="report-gentle-hint" aria-live="polite" hidden>再点满 3 个碎片，我就可以帮你生成报告哦。</p>
         </aside>
       </div>
 
@@ -74,6 +78,17 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
           <button type="button" data-intensity="3">几乎就是我</button>
         </div>
         <button class="quiet-button" type="button" id="skip-fragment">先放过这个</button>
+      </section>
+
+      <section class="report-progress-overlay" id="report-progress-overlay" aria-live="polite" hidden>
+        <div class="report-progress-panel">
+          <span>RESET ANALYSIS</span>
+          <h2 id="report-progress-title">正在读取你的状态碎片</h2>
+          <p id="report-progress-copy">我先把你放进凹槽的碎片放在一起看。</p>
+          <div class="report-progress-track" aria-label="复位报告生成进度">
+            <i id="report-progress-fill"></i>
+          </div>
+        </div>
       </section>
     </section>
 
@@ -141,6 +156,7 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
   const entrances = JSON.parse(document.querySelector("#positioning-entrances-data")?.textContent || "[]");
 
   const canvas = document.querySelector("#order-map-canvas");
+  const gamePage = document.querySelector(".positioning-game-page");
   const stage = document.querySelector(".positioning-stage");
   const fragmentCloud = document.querySelector("#fragment-cloud");
   const dialogue = document.querySelector("#fragment-dialogue");
@@ -149,7 +165,15 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
   const guideTitle = document.querySelector("#guide-title");
   const guideCopy = document.querySelector("#guide-copy");
   const selectedCount = document.querySelector("#selected-count");
+  const fragmentSlots = document.querySelector("#fragment-slots");
+  const reportButton = document.querySelector("#finish-positioning");
+  const reportHint = document.querySelector("#report-gentle-hint");
+  const reportProgressOverlay = document.querySelector("#report-progress-overlay");
+  const reportProgressTitle = document.querySelector("#report-progress-title");
+  const reportProgressCopy = document.querySelector("#report-progress-copy");
+  const reportProgressFill = document.querySelector("#report-progress-fill");
   const reportPanel = document.querySelector("#positioning-report");
+  const positioningLab = document.querySelector(".positioning-lab");
   const resultBox = document.querySelector("#state-result");
   const selectedOrderBanner = document.querySelector("#selected-order-banner");
   const selectedOrderTitle = document.querySelector("#selected-order-title");
@@ -166,6 +190,8 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
   let fragmentAnchors = [];
   let latestOrbitRotation = { x: 0, y: 0, z: 0 };
   let latestOrbitZoom = 1;
+  let isGeneratingReport = false;
+  const maxDockSlots = 3;
 
   const dimensionMeta = {
     psychology: { color: 0xd87563, position: [0, 0.08, 0], label: "心理秩序" },
@@ -215,6 +241,7 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     state.activeFragment = null;
     document.querySelectorAll(".floating-fragment").forEach((item) => item.classList.remove("is-active"));
     dialogue.hidden = true;
+    renderFragmentSlots();
   }
 
   function projectFragmentPoint(anchor, rotation) {
@@ -265,6 +292,74 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     });
   }
 
+  function createPlanetSurface(baseColor, seed = 0) {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    const color = new THREE.Color(baseColor);
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+
+    const base = ctx.createLinearGradient(0, 0, size, size);
+    base.addColorStop(0, `rgb(${Math.min(255, r + 58)}, ${Math.min(255, g + 48)}, ${Math.min(255, b + 42)})`);
+    base.addColorStop(0.42, `rgb(${r}, ${g}, ${b})`);
+    base.addColorStop(1, `rgb(${Math.max(0, r - 74)}, ${Math.max(0, g - 62)}, ${Math.max(0, b - 54)})`);
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, size, size);
+
+    for (let i = 0; i < 42; i += 1) {
+      const y = stableNoise(i, seed + 0.13) * size;
+      const height = 8 + stableNoise(i, seed + 0.37) * 28;
+      const alpha = 0.035 + stableNoise(i, seed + 0.51) * 0.06;
+      ctx.fillStyle = `rgba(255, 255, 252, ${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(size * 0.5, y, size * (0.52 + stableNoise(i, seed + 0.76) * 0.35), height, stableNoise(i, seed + 0.91) * 0.22 - 0.11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (let i = 0; i < 1800; i += 1) {
+      const x = stableNoise(i, seed + 1.7) * size;
+      const y = stableNoise(i, seed + 2.9) * size;
+      const radius = 0.35 + stableNoise(i, seed + 4.2) * 1.9;
+      const light = stableNoise(i, seed + 5.4) > 0.52;
+      ctx.fillStyle = light ? "rgba(255, 255, 252, 0.06)" : "rgba(0, 0, 0, 0.07)";
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    for (let i = 0; i < 22; i += 1) {
+      const x = stableNoise(i, seed + 8.2) * size;
+      const y = stableNoise(i, seed + 9.1) * size;
+      const radius = 9 + stableNoise(i, seed + 10.3) * 30;
+      const crater = ctx.createRadialGradient(x - radius * 0.28, y - radius * 0.24, 0, x, y, radius);
+      crater.addColorStop(0, "rgba(255, 255, 252, 0.055)");
+      crater.addColorStop(0.48, "rgba(0, 0, 0, 0.08)");
+      crater.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = crater;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const shade = ctx.createRadialGradient(size * 0.34, size * 0.28, 20, size * 0.52, size * 0.54, size * 0.7);
+    shade.addColorStop(0, "rgba(255, 255, 252, 0.22)");
+    shade.addColorStop(0.5, "rgba(255, 255, 252, 0)");
+    shade.addColorStop(1, "rgba(0, 0, 0, 0.28)");
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, size, size);
+
+    const map = new THREE.CanvasTexture(canvas);
+    if ("SRGBColorSpace" in THREE) map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 8;
+    map.needsUpdate = true;
+
+    return map;
+  }
+
   function createScene() {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
@@ -276,7 +371,8 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     const baseTiltZ = -0.06;
     const baseCameraZ = 6.45;
     const minZoom = 0.72;
-    const maxZoom = 1.42;
+    const maxZoom = 2.35;
+    const activeStartZoom = 1.45;
     let targetRotationX = 0;
     let targetRotationY = 0;
     let currentZoom = 1;
@@ -302,16 +398,20 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
 
     dimensions.forEach((dimension) => {
       const meta = dimensionMeta[dimension.id];
+      const surfaceMap = createPlanetSurface(meta.color, dimension.id.length);
       const sphere = new THREE.Mesh(
         new THREE.SphereGeometry(0.72, 64, 64),
         new THREE.MeshStandardMaterial({
-          color: meta.color,
-          roughness: 0.58,
-          metalness: 0.02,
+          color: 0xffffff,
+          map: surfaceMap,
+          bumpMap: surfaceMap,
+          bumpScale: 0.028,
+          roughness: 0.82,
+          metalness: 0,
           emissive: meta.color,
-          emissiveIntensity: 0.04,
+          emissiveIntensity: 0.018,
           transparent: true,
-          opacity: 0.66,
+          opacity: 0.82,
         }),
       );
       sphere.position.set(...meta.position);
@@ -364,17 +464,17 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
         if (activeDimensionId !== nextDimensionId) {
           targetRotationX = 0;
           targetRotationY = 0;
-          currentZoom = 1;
-          targetZoom = 1;
-          latestOrbitZoom = 1;
-          camera.position.z = baseCameraZ;
-          fragmentCloud?.style.setProperty("--planet-zoom", "1");
+          currentZoom = nextDimensionId ? activeStartZoom : 1;
+          targetZoom = nextDimensionId ? activeStartZoom : 1;
+          latestOrbitZoom = currentZoom;
+          camera.position.z = baseCameraZ / currentZoom;
+          fragmentCloud?.style.setProperty("--planet-zoom", currentZoom.toFixed(3));
         }
         activeDimensionId = nextDimensionId;
         spheres.forEach(({ sphere, ring, orbit }, id) => {
           const isActive = id === nextDimensionId;
           sphere.userData.targetScale = isActive ? 1 : 0;
-          sphere.userData.targetOpacity = isActive ? 0.7 : 0;
+          sphere.userData.targetOpacity = isActive ? 0.88 : 0;
           ring.userData.targetScale = isActive ? 1 : 0;
           ring.userData.targetOpacity = isActive ? 0.28 : 0;
           orbit.userData.targetScale = isActive ? 1 : 0;
@@ -480,7 +580,7 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
         sphere.material.opacity += ((sphere.userData.targetOpacity || 0) - sphere.material.opacity) * 0.1;
         ring.material.opacity += ((ring.userData.targetOpacity || 0) - ring.material.opacity) * 0.1;
         orbit.material.opacity += ((orbit.userData.targetOpacity || 0) - orbit.material.opacity) * 0.1;
-        sphere.material.emissiveIntensity = 0.04 + percent * 0.22;
+        sphere.material.emissiveIntensity = 0.018 + percent * 0.12;
         sphere.rotation.y += activeDimensionId === id ? 0.004 + percent * 0.005 : 0.001;
         sphere.rotation.x = Math.sin(time * 0.38) * 0.08;
         ring.rotation.z += 0.004 + percent * 0.004;
@@ -616,6 +716,46 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     syncFragmentOrbit();
   }
 
+  function renderFragmentSlots() {
+    if (!fragmentSlots) return;
+    fragmentSlots.innerHTML = Array.from({ length: maxDockSlots })
+      .map((_, index) => {
+        const item = state.selected[index];
+        const pendingItem = !item && state.activeFragment && index === state.selected.length ? state.activeFragment : null;
+        if (pendingItem) {
+          return `
+            <div class="fragment-slot is-preview" data-slot="${index + 1}">
+              <span class="slot-index">0${index + 1}</span>
+              <button class="slot-fragment" type="button" data-tooltip="${escapeHtml(pendingItem.text)}" title="${escapeHtml(pendingItem.text)}">
+                <strong>${escapeHtml(pendingItem.text)}</strong>
+                <small>先放在这里，等你确认程度</small>
+              </button>
+            </div>
+          `;
+        }
+        if (!item) {
+          return `
+            <div class="fragment-slot" data-slot="${index + 1}">
+              <span class="slot-index">0${index + 1}</span>
+              <span class="slot-placeholder">等一个像你的碎片</span>
+            </div>
+          `;
+        }
+        const intensityText = item.intensity === 3 ? "几乎就是我" : item.intensity === 2 ? "很像" : "有一点像";
+        return `
+          <div class="fragment-slot is-filled" data-slot="${index + 1}">
+            <button class="slot-remove" type="button" data-remove-fragment="${escapeHtml(item.id)}" aria-label="删除这个碎片">×</button>
+            <span class="slot-index">0${index + 1}</span>
+            <button class="slot-fragment" type="button" data-tooltip="${escapeHtml(item.text)}" title="${escapeHtml(item.text)}">
+              <strong>${escapeHtml(item.text)}</strong>
+              <small>${escapeHtml(item.shortTitle || item.dimensionTitle)} · ${escapeHtml(intensityText)}</small>
+            </button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
   function updateSelectedOrderBanner() {
     if (!selectedOrderBanner) return;
     if (!state.activeDimensionId || !state.initialEntry) {
@@ -630,6 +770,10 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
 
   function updateGuide() {
     selectedCount.textContent = `${state.selected.length} 个碎片已归位`;
+    renderFragmentSlots();
+    reportButton?.classList.toggle("is-ready", state.selected.length >= maxDockSlots);
+    reportButton?.classList.remove("needs-more-fragments");
+    if (reportHint instanceof HTMLElement && state.selected.length >= maxDockSlots) reportHint.hidden = true;
     if (!state.initialEntry) {
       stage?.classList.remove("has-started");
       stage?.removeAttribute("data-active-dimension");
@@ -641,11 +785,17 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     stage?.classList.add("has-started");
     stage?.setAttribute("data-active-dimension", state.activeDimensionId || "");
     updateSelectedOrderBanner();
-    guideTitle.textContent = state.selected.length ? "继续点最像你的碎片" : "现在点一个状态碎片";
-    guideCopy.textContent = state.selected.length >= 5 ? "已经足够生成报告了。你也可以再选几个。" : "不用全部点完，先选三到五个最像你的。";
+    guideTitle.textContent = state.selected.length ? "把最像你的碎片放进凹槽" : "现在点一个状态碎片";
+    guideCopy.textContent =
+      state.selected.length >= maxDockSlots
+        ? "三个凹槽已经放满了。你可以生成报告，也可以删掉一个再换。"
+        : "先放进三个最像你的。鼠标停在凹槽上，可以看完整描述。";
   }
 
   function resetEntrySelection() {
+    resetReportProgress();
+    gamePage?.classList.remove("is-reporting");
+    if (stage instanceof HTMLElement) stage.hidden = false;
     state.initialEntry = null;
     state.activeDimensionId = null;
     state.activeFragment = null;
@@ -655,6 +805,7 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     fragmentCloud.innerHTML = "";
     fragmentAnchors = [];
     dialogue.hidden = true;
+    if (positioningLab instanceof HTMLElement) positioningLab.hidden = false;
     reportPanel.hidden = true;
     document.querySelectorAll(".entry-button").forEach((item) => item.classList.remove("is-selected"));
     document.querySelectorAll(".floating-fragment").forEach((item) => item.classList.remove("is-active", "is-collected"));
@@ -699,12 +850,13 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     fragmentDomain.textContent = fragment.dimensionTitle;
     placeDialogue(anchor);
     dialogue.hidden = false;
+    renderFragmentSlots();
   }
 
   function chooseIntensity(intensity) {
     if (!state.activeFragment) return;
     const fragment = state.activeFragment;
-    if (!state.selected.some((item) => item.id === fragment.id)) {
+    if (!state.selected.some((item) => item.id === fragment.id) && state.selected.length < maxDockSlots) {
       state.selected.push({ ...fragment, intensity });
       state.scores[fragment.dimensionId] = (state.scores[fragment.dimensionId] || 0) + intensity;
       document.querySelector(`[data-fragment-id="${CSS.escape(fragment.id)}"]`)?.classList.add("is-collected");
@@ -712,6 +864,19 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     state.activeFragment = null;
     document.querySelectorAll(".floating-fragment").forEach((item) => item.classList.remove("is-active"));
     dialogue.hidden = true;
+    updateGuide();
+  }
+
+  function removeSelectedFragment(fragmentId) {
+    const selectedIndex = state.selected.findIndex((item) => item.id === fragmentId);
+    if (selectedIndex < 0) return;
+    const [removed] = state.selected.splice(selectedIndex, 1);
+    state.scores[removed.dimensionId] = Math.max(0, (state.scores[removed.dimensionId] || 0) - removed.intensity);
+    document.querySelector(`[data-fragment-id="${CSS.escape(removed.id)}"]`)?.classList.remove("is-collected", "is-active");
+    if (state.activeFragment?.id === removed.id) {
+      state.activeFragment = null;
+      dialogue.hidden = true;
+    }
     updateGuide();
   }
 
@@ -750,8 +915,66 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     };
   }
 
-  function renderReport() {
-    const draft = buildDraft();
+  function resetReportProgress() {
+    isGeneratingReport = false;
+    if (reportProgressOverlay instanceof HTMLElement) reportProgressOverlay.hidden = true;
+    if (reportProgressFill instanceof HTMLElement) reportProgressFill.style.width = "0%";
+    reportButton?.removeAttribute("disabled");
+    stage?.classList.remove("is-generating-report");
+  }
+
+  function startReportProgress(onComplete) {
+    if (isGeneratingReport) return;
+    isGeneratingReport = true;
+    closeFragmentDialogue();
+    reportButton?.setAttribute("disabled", "true");
+    stage?.classList.add("is-generating-report");
+    if (reportProgressOverlay instanceof HTMLElement) reportProgressOverlay.hidden = false;
+
+    const steps = [
+      { at: 0, title: "正在读取你的状态碎片", copy: "我先把你放进凹槽的碎片放在一起看。" },
+      { at: 34, title: "正在整理主要失序来源", copy: "我会看见哪一类秩序正在消耗你更多力气。" },
+      { at: 68, title: "正在生成复位建议", copy: "我会把结果说得清楚一点，让下一步更容易开始。" },
+      { at: 96, title: "报告即将完成", copy: "马上给你一份可以继续行动的复位报告。" },
+    ];
+    const duration = 1750;
+    const startedAt = performance.now();
+    let activeStepIndex = -1;
+
+    function tick(now) {
+      const progress = Math.min(100, ((now - startedAt) / duration) * 100);
+      if (reportProgressFill instanceof HTMLElement) reportProgressFill.style.width = `${progress.toFixed(1)}%`;
+
+      const nextStepIndex = steps.reduce((latest, step, index) => (progress >= step.at ? index : latest), 0);
+      if (nextStepIndex !== activeStepIndex) {
+        activeStepIndex = nextStepIndex;
+        if (reportProgressTitle) reportProgressTitle.textContent = steps[nextStepIndex].title;
+        if (reportProgressCopy) reportProgressCopy.textContent = steps[nextStepIndex].copy;
+      }
+
+      if (progress < 100) {
+        requestAnimationFrame(tick);
+        return;
+      }
+
+      window.setTimeout(onComplete, 260);
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  function showReport(draft) {
+    if (state.selected.length < maxDockSlots) {
+      const remaining = maxDockSlots - state.selected.length;
+      if (reportHint instanceof HTMLElement) {
+        reportHint.textContent = `再放进 ${remaining} 个最像你的碎片，我就可以帮你生成报告哦。`;
+        reportHint.hidden = false;
+      }
+      reportButton?.classList.remove("needs-more-fragments");
+      requestAnimationFrame(() => reportButton?.classList.add("needs-more-fragments"));
+      return;
+    }
+    if (reportHint instanceof HTMLElement) reportHint.hidden = true;
     resultBox.innerHTML = `
       <strong>${escapeHtml(draft.conclusion.title)}</strong>
       <div class="order-bars">${renderBars(draft.scores)}</div>
@@ -761,11 +984,29 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
       <p>${escapeHtml(draft.conclusion.advice)}</p>
       <p>下一步建议：${escapeHtml(draft.conclusion.repairTitle)}</p>
     `;
+    resetReportProgress();
+    if (positioningLab instanceof HTMLElement) positioningLab.hidden = true;
+    if (stage instanceof HTMLElement) stage.hidden = true;
+    gamePage?.classList.add("is-reporting");
     reportPanel.hidden = false;
-    reportPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => {
+      reportPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function renderReport() {
+    if (state.selected.length < maxDockSlots) {
+      showReport(null);
+      return;
+    }
+    if (isGeneratingReport) return;
+    if (reportHint instanceof HTMLElement) reportHint.hidden = true;
+    const draft = buildDraft();
+    startReportProgress(() => showReport(draft));
   }
 
   function addCustomFragment() {
+    if (state.selected.length >= maxDockSlots) return;
     const textInput = document.querySelector("#custom-fragment-text");
     const dimensionSelect = document.querySelector("#custom-fragment-dimension");
     const intensitySelect = document.querySelector("#custom-fragment-intensity");
@@ -820,23 +1061,18 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     updateGuide();
   });
 
-  document.querySelector("#custom-entry")?.addEventListener("input", (event) => {
-    const value = event.target instanceof HTMLInputElement ? event.target.value.trim() : "";
-    if (!value) return;
-    state.initialEntry = { value: "custom", label: value, direction: "你自己的描述" };
-    state.activeDimensionId = state.activeDimensionId || "cognition";
-    sceneController?.setActiveDimension(state.activeDimensionId);
-    document.querySelectorAll(".entry-button").forEach((item) => item.classList.remove("is-selected"));
-    document.querySelector(".map-panel-start")?.classList.add("is-compact");
-    renderFragments();
-    updateGuide();
-  });
-
   fragmentCloud.addEventListener("click", (event) => {
     const button = event.target instanceof HTMLElement ? event.target.closest("[data-fragment-id]") : null;
     if (!button || button.classList.contains("is-collected")) return;
+    if (state.selected.length >= maxDockSlots) return;
     const fragment = fragments.find((item) => item.id === button.getAttribute("data-fragment-id"));
     if (fragment) openFragment(fragment, button);
+  });
+
+  fragmentSlots?.addEventListener("click", (event) => {
+    const button = event.target instanceof HTMLElement ? event.target.closest("[data-remove-fragment]") : null;
+    const fragmentId = button?.getAttribute("data-remove-fragment");
+    if (fragmentId) removeSelectedFragment(fragmentId);
   });
 
   dialogue.addEventListener("click", (event) => {
@@ -850,13 +1086,18 @@ import { orderDimensions, positioningEntrances } from "@/data/site";
     state.activeFragment = null;
     document.querySelectorAll(".floating-fragment").forEach((item) => item.classList.remove("is-active"));
     dialogue.hidden = true;
+    renderFragmentSlots();
   });
   document.querySelector("#reset-entry")?.addEventListener("click", resetEntrySelection);
   document.querySelector("#finish-positioning")?.addEventListener("click", renderReport);
   document.querySelector("#add-custom-fragment")?.addEventListener("click", addCustomFragment);
   document.querySelector("#save-positioning")?.addEventListener("click", saveAndContinue);
   document.querySelector("#keep-positioning")?.addEventListener("click", () => {
+    resetReportProgress();
     reportPanel.hidden = true;
+    gamePage?.classList.remove("is-reporting");
+    if (stage instanceof HTMLElement) stage.hidden = false;
+    if (positioningLab instanceof HTMLElement) positioningLab.hidden = false;
     document.querySelector(".positioning-stage")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 

@@ -96,6 +96,8 @@ DEPLOY_APP_ROOT=/www/wwwroot/reset-life
 DEPLOY_APP_PORT=8080
 DEPLOY_INTERNAL_REMINDER_TOKEN=随机长字符串
 DEPLOY_KEEP_RELEASES=3
+DEPLOY_BT_GO_PROJECT=1
+DEPLOY_BT_GO_PROJECT_NAME=reset_life
 ```
 
 自动部署脚本会：
@@ -106,9 +108,27 @@ DEPLOY_KEEP_RELEASES=3
 - 切换 `current` 软链
 - 重启 Go API
 - 检查 `/api/healthz`
+- 同步宝塔 Go 项目记录和 PID
 - 清理旧发布包
 
-## 6. 排查
+## 6. 宝塔 Go 项目可见性
+
+当前站点不是整站反代到 Go，而是：
+
+- Nginx 直接服务 `/www/wwwroot/reset-life/current/public`
+- `/api/` 反向代理到 `127.0.0.1:8080`
+
+因此不要让宝塔 Go 项目模板覆盖当前域名 Nginx 配置。部署脚本默认只把当前 Go API 登记为宝塔 Go 项目，方便在面板的 Go 项目列表里查看运行状态：
+
+```text
+项目名：reset_life
+端口：8080
+执行文件：/www/wwwroot/reset-life/current/api/resetlife-api
+工作目录：/www/wwwroot/reset-life/current
+PID：/var/tmp/gopids/reset_life.pid
+```
+
+## 7. 排查
 
 检查 API：
 
